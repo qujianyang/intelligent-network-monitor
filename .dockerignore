@@ -1,0 +1,96 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Documentation
+docs/
+markdown/
+*.md
+!README.md
+
+# Local development
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache and temporary files
+cache/
+tmp/
+temp/
+
+# Large model files (will be downloaded in container)
+*.pkl
+*.bin
+*.pth
+*.safetensors
+*.onnx
+
+# Data files (will be mounted as volumes)
+data/CSV/*
+data/*.csv
+
+# Uploaded files (will be mounted as volume)
+uploads/
+
+# Node modules (if any)
+node_modules/
+
+# Docker
+docker-compose.override.yml
+Dockerfile.local
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z

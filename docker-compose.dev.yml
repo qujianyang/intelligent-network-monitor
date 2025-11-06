@@ -1,0 +1,117 @@
+services:
+  # MySQL Database Service
+  qkd-mysql:
+    image: mysql:8.0
+    container_name: qkd-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qkd_dev_password}
+      MYSQL_DATABASE: ${DB_NAME:-qkd}
+      MYSQL_TCP_PORT: 3307
+    ports:
+      - "${DB_PORT:-3307}:3307"
+    volumes:
+      - qkd-mysql-data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - qkd-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-P", "3307"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Ollama LLM Service
+  qkd-ollama:
+    image: ollama/ollama:latest
+    container_name: qkd-ollama-dev
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - qkd-ollama-models:/root/.ollama
+    networks:
+      - qkd-network
+
+  # Flask GUI Application
+  qkd-gui:
+    build:
+      context: .
+      dockerfile: Dockerfile.gui
+      args:
+        PYTHON_VERSION: 3.10
+    container_name: qkd-gui-dev
+    restart: unless-stopped
+    environment:
+      # Flask Configuration
+      FLASK_ENV: development
+      FLASK_DEBUG: "true"
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key_change_in_production}
+
+      # Database Configuration
+      DB_HOST: qkd-mysql
+      DB_PORT: 3307
+      DB_NAME: qkd
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qkd_dev_password}
+
+      # ML Database Configuration
+      ML_DB_HOST: qkd-mysql
+      ML_DB_PORT: 3307
+      ML_DB_NAME: qkd_ml
+      ML_DB_USER: root
+      ML_DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-qkd_dev_password}
+
+      # Ollama Configuration
+      LOCAL_LLM_API: http://qkd-ollama:11434
+      LOCAL_LLM_MODEL: qwen2:7b-instruct-q4_0
+
+      # MCP Configuration (only if you need it)
+      MCP_BASE_URL: ${MCP_BASE_URL:-https://10.1.1.3}
+      MCP_USERNAME: ${MCP_USERNAME:-admin}
+      MCP_PASSWORD: ${MCP_PASSWORD:-adminpw}
+      # Development override: disable auth guard when troubleshooting
+      QKD_DISABLE_AUTH: "true"
+    ports:
+      - "${FLASK_PORT:-5000}:5000"
+    volumes:
+      # Application code (for development hot reload)
+      - ./GUI:/app/GUI:ro
+      - ./Dashboard:/app/Dashboard:ro
+      - ./config.py:/app/config.py:ro
+
+      # Persistent data volumes
+      - qkd-logs:/app/logs
+      - qkd-uploads:/app/uploads
+      - qkd-models:/app/Dashboard/models
+      - qkd-data:/app/data
+      - qkd-cache:/app/cache
+    depends_on:
+      qkd-mysql:
+        condition: service_healthy
+      qkd-ollama:
+        condition: service_started
+    networks:
+      - qkd-network
+    command: python GUI/app.py --host 0.0.0.0 --port 5000
+
+networks:
+  qkd-network:
+    driver: bridge
+
+volumes:
+  qkd-mysql-data:
+  qkd-ollama-models:
+  qkd-logs:
+  qkd-uploads:
+  qkd-models:
+  qkd-data:
+  qkd-cache:

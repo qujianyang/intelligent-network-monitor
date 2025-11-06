@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'performance.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('performance_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'performance.view_individual' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('individual_performance_metrics') }}" role="button">Individual Metrics</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('qkd_metrics') }}" role="button">QKD Metrics</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <h3>Performance Management Overview</h3>
+        <p>This section provides an overview of the current performance management status, including key
+            metrics.</p>
+        <div class="row row-cols-1 row-cols-md-5 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">QBER</h6>
+                        <h2 class="card-title text-primary">{{average_qber}}%</h2>
+                        <p class="card-text text-muted small">Quantum Bit Error Rate</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Visibility</h6>
+                        <h2 class="card-title text-primary">{{average_visibility}}%</h2>
+                        <p class="card-text text-muted small">Optical signal visibility</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Secret Key Rate</h6>
+                        <h2 class="card-title text-primary">{{average_keyrate}} kbps</h2>
+                        <p class="card-text text-muted small">kbits per second</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Key Availability</h6>
+                        <h2 class="card-title text-primary">99.9%</h2>
+                        <p class="card-text text-muted small">Uptime of usable keys</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Keys Generated</h6>
+                        <h2 class="card-title text-primary">{{key_summaries['total_keys_generated']}}</h2>
+                        <p class="card-text text-muted small">Generated today</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Keys Consumed</h6>
+                        <h2 class="card-title text-primary">{{key_summaries['total_keys_consumed']}}</h2>
+                        <p class="card-text text-muted small">Used in applications</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Keys Expired</h6>
+                        <h2 class="card-title text-primary">{{key_summaries['total_keys_expired']}}</h2>
+                        <p class="card-text text-muted small">Unused before expiration</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Avg. Retention Time</h6>
+                        <h2 class="card-title text-primary">{{weighted_avg_retention_time}} mins</h2>
+                        <p class="card-text text-muted small">Avg. time before consumption</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Max Hold Time</h6>
+                        <h2 class="card-title text-primary">6 hrs</h2>
+                        <p class="card-text text-muted small">Maximum key retention</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Key Efficiency</h6>
+                        <h2 class="card-title text-primary">{{key_summaries['key_efficiency']}}%</h2>
+                        <p class="card-text text-muted small">Generation efficiency</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="performanceChart" style="height:500px;"></canvas>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="healthChart" style="height:500px;"></canvas>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="keyUsageChart" style="height:500px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Graphs-->
+    <script>
+
+        // Average QBER / Visibility / Key Rate Over Time (Line)
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'], // Time points
+                datasets: [
+                    {
+                        label: 'Avg. QBER (%)',
+                        data: [0.45, 0.47, 0.52, 0.48, 0.50, 0.46],
+                        borderColor: 'red',
+                        backgroundColor: 'red',
+                        tension: 0.4,
+                        yAxisID: 'y-left',
+                    },
+                    {
+                        label: 'Avg. Visibility (%)',
+                        data: [97.5, 98.2, 98.0, 97.8, 98.1, 97.9],
+                        borderColor: 'blue',
+                        backgroundColor: 'blue',
+                        tension: 0.4,
+                        yAxisID: 'y-left',
+                    },
+                    {
+                        label: 'Avg. Secret Key Rate (bps)',
+                        data: [1240, 1285, 1225, 1260, 1275, 1255],
+                        borderColor: 'green',
+                        backgroundColor: 'green',
+                        tension: 0.4,
+                        yAxisID: 'y-right',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // This allows canvas height to be used fully
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                stacked: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'QKD Performance Metrics Over Time'
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    'y-left': {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'QBER / Visibility (%)'
+                        }
+                    },
+                    'y-right': {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Secret Key Rate (bps)'
+                        },
+                        grid: {
+                            drawOnChartArea: false // only draw grid for left y-axis
+                        }
+                    }
+                }
+            }
+        });
+
+        // Healthchart (bar)
+        const healthCtx = document.getElementById('healthChart').getContext('2d');
+
+        new Chart(healthCtx, {
+            type: 'bar',
+            data: {
+                labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'],
+                datasets: [
+                    {
+                        label: 'Healthy',
+                        data: [40, 38, 35, 42, 39, 41],
+                        backgroundColor: 'green'
+                    },
+                    {
+                        label: 'Warning',
+                        data: [5, 6, 8, 3, 4, 5],
+                        backgroundColor: 'gold'
+                    },
+                    {
+                        label: 'Critical',
+                        data: [2, 3, 4, 2, 4, 1],
+                        backgroundColor: 'red'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // This allows canvas height to be used fully
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Node/Link Status Over Time'
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Links/Nodes'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Key Generation vs Consumption (Over Time)
+        const keyGenCtx = document.getElementById('keyUsageChart').getContext('2d');
+
+        new Chart(keyGenCtx, {
+            type: 'line',
+            data: {
+                labels: JSON.parse('{{ dates | tojson }}'),
+                datasets: [
+                    {
+                        label: 'Total Keys Generated',
+                        data: JSON.parse('{{ keys_generated | tojson }}'),
+                        borderColor: 'blue',
+                        backgroundColor: 'blue',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Total Keys Consumed',
+                        data: JSON.parse('{{ keys_consumed | tojson }}'),
+                        borderColor: 'green',
+                        backgroundColor: 'green',
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Keys Generated vs. Consumed (Daily)'
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Keys (count)'
+                        },
+                        ticks: {
+                            stepSize: 1,   // Ensure the ticks are whole numbers
+                            callback: function (value, index, values) {
+                                return Number(value).toFixed(0);  // Ensure whole numbers only
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Day'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

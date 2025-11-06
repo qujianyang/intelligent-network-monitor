@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'performance.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('performance_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'performance.view_individual' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('individual_performance_metrics') }}" role="button">Individual Metrics</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('qkd_metrics') }}" role="button">QKD Metrics</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>All Performance Metrics</h3>
+        <p class="text-muted">View detailed performance metrics for all links and nodes.</p>
+
+        <div class="row g-4 mb-2 align-items-center">
+            <!-- <div class="col-md-2">
+                <div>
+                    <label class="form-label fw-bold">Node / Link:</label>
+                    <select id="timeWindowFilter" class="form-select">
+                        <option value="#">Node A</option>
+                        <option value="#">Node B</option>
+                        <option value="#">Link 1</option>
+                        <option value="#">Link 2</option>
+                        <option value="#">Node C</option>
+                    </select>
+                </div>
+            </div> -->
+            <div class="col-md-11 d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label fw-bold">Filter By Time:</label> <br>
+                    <div class="btn-group" role="group" aria-label="Time filter buttons">
+                        <button type="button" class="btn btn-outline-primary" data-value="all">All</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="1h">Last 1 Hour</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="24h">Last 24 Hours</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="7d">Last 7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="custom"
+                            id="customButton">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom range picker (hidden initially) -->
+                <div class="d-flex gap-2 mt-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" />
+                    <input type="datetime-local" id="endTime" class="form-control" />
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="col-md-1 text-end">
+                <label class="form-label fw-bold">Export Data:</label><br>
+                <button class="btn btn-outline-success me-2" onclick="exportToExcel()" title="Export to Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                <a class="nav-item nav-link active" id="nav-qber-tab" data-bs-toggle="tab" href="#nav-qber" role="tab"
+                    aria-controls="nav-qber" aria-selected="true">QBER Metrics</a>
+                <a class="nav-item nav-link" id="nav-visibility-tab" data-bs-toggle="tab" href="#nav-visibility"
+                    role="tab" aria-controls="nav-visibility" aria-selected="false">Visibility Metrics</a>
+                <a class="nav-item nav-link" id="nav-secret-key-rate-tab" data-bs-toggle="tab"
+                    href="#nav-secret-key-rate" role="tab" aria-controls="nav-secret-key-rate"
+                    aria-selected="false">Secret Key Rate Metrics</a>
+                <a class="nav-item nav-link" id="nav-secret-key-availability-tab" data-bs-toggle="tab"
+                    href="#nav-secret-key-availability" role="tab" aria-controls="nav-secret-key-availability"
+                    aria-selected="false">Secret Key Availability Metrics</a>
+                <a class="nav-item nav-link" id="nav-quantum-link-quality-index-tab" data-bs-toggle="tab"
+                    href="#nav-quantum-link-quality-index" role="tab" aria-controls="nav-quantum-link-quality-index"
+                    aria-selected="false">Quantum Link Quality Index</a>
+            </div>
+        </nav>
+        <div class="tab-content" id="nav-tabContent">
+            <!-- QBER Metrics -->
+            <div class="tab-pane fade show active" id="nav-qber" role="tabpanel" aria-labelledby="nav-qber-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="qberTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Link / Node</th>
+                            <th scope="col">QBER (%)</th>
+                            <th scope="col">Threshold Breach(%)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>Node-A</td>
+                            <td>0.46</td>
+                            <td>72.5</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-02 18:42 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-B</td>
+                            <td>8.73</td>
+                            <td>104.1</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>2025-06-01 11:15 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Node-C</td>
+                            <td>11.92</td>
+                            <td>130.6</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>2025-05-30 03:27 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-D</td>
+                            <td>2.34</td>
+                            <td>58.3</td>
+                            <td><span class="badge bg-secondary">Offline</span></td>
+                            <td>2025-06-03 08:03 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Visibility Metrics -->
+            <div class="tab-pane fade" id="nav-visibility" role="tabpanel" aria-labelledby="nav-visibility-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="visibilityTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Link / Node</th>
+                            <th scope="col">Visibility (%)</th>
+                            <th scope="col">Min. Threshold (%)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>Link-X1</td>
+                            <td>99.1</td>
+                            <td>97.5</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-03 02:10 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Node-Y3</td>
+                            <td>92.6</td>
+                            <td>95.0</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>2025-06-01 15:43 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-Z2</td>
+                            <td>84.2</td>
+                            <td>94.0</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>2025-05-31 09:22 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Node-A5</td>
+                            <td>96.8</td>
+                            <td>93.0</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-02 21:35 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Secret Key Rate Metrics -->
+            <div class="tab-pane fade" id="nav-secret-key-rate" role="tabpanel"
+                aria-labelledby="nav-secret-key-rate-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="secretKeyRateTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Link / Node</th>
+                            <th scope="col">Secret Key Rate (bps)</th>
+                            <th scope="col">Threshold Breach</th>
+                            <th scope="col">Historical Avg. (1hr)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>Node-R2</td>
+                            <td>320 bps</td>
+                            <td>Yes</td>
+                            <td>610 bps</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>2025-06-02 14:47 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-Q1</td>
+                            <td>1.25 kbps</td>
+                            <td>No</td>
+                            <td>1180 bps</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-03 07:20 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-S4</td>
+                            <td>85 bps</td>
+                            <td>Yes</td>
+                            <td>430 bps</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>2025-06-01 22:08 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Node-T7</td>
+                            <td>980 bps</td>
+                            <td>No</td>
+                            <td>1021 bps</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-03 04:33 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Secret Key Availability Metrics -->
+            <div class="tab-pane fade" id="nav-secret-key-availability" role="tabpanel"
+                aria-labelledby="nav-secret-key-availability-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="secretKeyAvailabilityTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Link / Node</th>
+                            <th scope="col">Key Pool Size (bits)</th>
+                            <th scope="col">% Remaining</th>
+                            <th scope="col">Consumption Rate</th>
+                            <th scope="col">Est. Time Remaining</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"># of Active Sessions</th>
+                            <th scope="col">Auto-Replenishment Enabled</th>
+                            <th scope="col">Backup Key Source Available</th>
+                            <th scope="col">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>Node-K1</td>
+                            <td>1,024,000</td>
+                            <td>82%</td>
+                            <td>12 kbps</td>
+                            <td>1h 55m</td>
+                            <td><span class="badge bg-secondary">Offline</span></td>
+                            <td>4</td>
+                            <td>Yes</td>
+                            <td>Yes</td>
+                            <td>2025-06-03 06:48 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-M2</td>
+                            <td>512,000</td>
+                            <td>38%</td>
+                            <td>18 kbps</td>
+                            <td>17m</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>6</td>
+                            <td>No</td>
+                            <td>Yes</td>
+                            <td>2025-06-02 19:30 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Node-N4</td>
+                            <td>256,000</td>
+                            <td>12%</td>
+                            <td>24 kbps</td>
+                            <td>2m</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>9</td>
+                            <td>No</td>
+                            <td>No</td>
+                            <td>2025-06-01 23:15 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-P5</td>
+                            <td>768,000</td>
+                            <td>64%</td>
+                            <td>10 kbps</td>
+                            <td>1h 18m</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>3</td>
+                            <td>Yes</td>
+                            <td>No</td>
+                            <td>2025-06-03 03:02 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Quantum Link Quality Index -->
+            <div class="tab-pane fade" id="nav-quantum-link-quality-index" role="tabpanel"
+                aria-labelledby="nav-quantum-link-quality-index-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="qlqiTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Link</th>
+                            <th scope="col">QBER (%)</th>
+                            <th scope="col">Visibility(%)</th>
+                            <th scope="col">Stability Score</th>
+                            <th scope="col">Composite Score</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>Link-A1</td>
+                            <td>0.38</td>
+                            <td>98.7</td>
+                            <td>92.1</td>
+                            <td>95.3</td>
+                            <td><span class="badge bg-primary">Online</span></td>
+                            <td>2025-06-03 05:44 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-B2</td>
+                            <td>7.92</td>
+                            <td>91.5</td>
+                            <td>72.4</td>
+                            <td>81.0</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>2025-06-02 20:10 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-C3</td>
+                            <td>12.65</td>
+                            <td>83.2</td>
+                            <td>49.6</td>
+                            <td>61.4</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>2025-06-01 18:25 UTC</td>
+                        </tr>
+                        <tr>
+                            <td>Link-D4</td>
+                            <td>1.12</td>
+                            <td>97.1</td>
+                            <td>88.9</td>
+                            <td>92.7</td>
+                            <td><span class="badge bg-secondary">Offline</span></td>
+                            <td>2025-06-03 08:00 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <script>
+        $(document).ready(function () {
+            $('#qberTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[4, "desc"]] // Default sort by "Last Updated" column
+            });
+            $('#visibilityTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+            $('#secretKeyRateTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+            $('#secretKeyAvailabilityTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+            $('#qlqiTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+            $('#interfaceHealthMonitorTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+        });
+
+        let selectedTimeWindow = 'all'; // Default
+
+        function filterTable() {
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (selectedTimeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return;
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentStatsTable tr');
+            rows.forEach(row => {
+                const timeText = row.cells[-1].textContent.trim(); // Column 0 = Timestamp
+                const detectedTime = new Date(timeText);
+                const matchesTime = (selectedTimeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+                row.style.display = matchesTime ? '' : 'none';
+            });
+        }
+
+        // Listen to all time filter buttons
+        document.querySelectorAll('[data-value]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Update selected value
+                selectedTimeWindow = this.getAttribute('data-value');
+
+                // Highlight active button
+                document.querySelectorAll('[data-value]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide custom range inputs
+                const isCustom = selectedTimeWindow === 'custom';
+                document.getElementById('customRangeInputs').classList.toggle('d-none', !isCustom);
+
+                filterTable(); // Run the filter
+            });
+        });
+
+        // Refilter when custom date inputs are changed
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            // const table = document.getElementById("statsTable");
+            // const wb = XLSX.utils.table_to_book(table, { sheet: "statsTable" });
+            // XLSX.writeFile(wb, "statsTable.xlsx");
+            const activePane = document.querySelector('.tab-pane.show.active');
+            const table = activePane?.querySelector('table');
+            if (!table) {
+                alert('No table found.');
+                return;
+            }
+
+            const wb = XLSX.utils.table_to_book(table, { sheet: table.id || "Sheet1" });
+            XLSX.writeFile(wb, `${table.id || 'table'}.xlsx`);
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        async function exportToPDF() {
+            // const { jsPDF } = window.jspdf;
+            // const doc = new jsPDF();
+            // doc.autoTable({ html: '#statsTable' });
+            // doc.save('statsTable.pdf');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Find the active tab-pane
+            const activePane = document.querySelector('.tab-pane.show.active');
+            if (!activePane) {
+                alert('No visible table found.');
+                return;
+            }
+
+            // Find the first table inside the active pane
+            const table = activePane.querySelector('table');
+            if (!table) {
+                alert('No table found in the visible tab.');
+                return;
+            }
+
+            doc.autoTable({ html: table });
+            doc.save(`${table.id || 'table'}.pdf`);
+        }
+    </script>
+
+
+</body>
+
+</html>

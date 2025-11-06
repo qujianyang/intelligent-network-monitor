@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+    <title>{% block title %}QKD Dashboard{% endblock %}</title>
+    {% if debug %}
+    <!-- Stagewise Toolbar (development only) -->
+    <script type="module">
+        /*
+         * We load the ESM bundle directly from UNPKG and initialise it.
+         * The ?module suffix forces modern browsers to load the ES module version.
+         */
+        import { initToolbar } from 'https://unpkg.com/@stagewise/toolbar?module';
+        initToolbar();
+    </script>
+    {% endif %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+
+    <!-- Include the chatbot HTML -->
+    {% include 'common/chatbot.html' %}
+</body>
+
+</html>

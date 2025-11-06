@@ -1,0 +1,409 @@
+<style>
+/* Modal styles for Document Manager */
+.modal {
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s;
+}
+
+.modal-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.modal-close:hover {
+    transform: scale(1.2);
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-primary:hover, .btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.document-item:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    transition: all 0.3s;
+}
+
+/* Voice button styles */
+.voice-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #f0f0f0;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 8px;
+}
+
+.voice-button:hover {
+    background: #e0e0e0;
+}
+
+.voice-button.listening {
+    background: #ff4444;
+    animation: pulse 1.5s infinite;
+}
+
+.voice-button.listening i {
+    color: white;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
+    50% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+}
+
+.voice-error-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ff4444;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10000;
+    animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+/* Staged Image Preview Styles */
+.staged-image-preview {
+    padding: 8px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.staged-image-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: white;
+    border-radius: 6px;
+    border: 2px solid #667eea;
+    animation: fadeIn 0.3s;
+}
+
+.staged-image-item img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.staged-image-label {
+    font-weight: 500;
+    color: #667eea;
+    flex: 1;
+}
+
+.remove-staged-image {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    transition: all 0.2s;
+}
+
+.remove-staged-image:hover {
+    color: #ff4444;
+    transform: scale(1.1);
+}
+</style>
+
+<!-- AI-Powered Chatbot Widget -->
+<div id="chatbot-container" class="chatbot-container">
+    <div id="chatbot-header" class="chatbot-header">
+        <div class="chatbot-title">
+            <i class="fas fa-brain"></i>
+            <span>AI Assistant</span>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="chat-mode-selector" role="toolbar" aria-label="Chat mode selection">
+            <button id="chat-mode-btn" class="mode-btn active" data-mode="chat"
+                    aria-label="Switch to normal chat mode"
+                    aria-pressed="true"
+                    title="Normal chat with AI">
+                <i class="fas fa-comments" aria-hidden="true"></i> Chat
+            </button>
+            <button id="sop-mode-btn" class="mode-btn" data-mode="sop"
+                    aria-label="Switch to SOP documentation mode"
+                    aria-pressed="false"
+                    title="Search SOPs and procedures">
+                <i class="fas fa-book" aria-hidden="true"></i> SOP
+            </button>
+            <button id="agent-mode-btn" class="mode-btn" data-mode="agent"
+                    aria-label="Switch to agent reasoning mode"
+                    aria-pressed="false"
+                    title="AI agent with tools and reasoning">
+                <i class="fas fa-brain" aria-hidden="true"></i> Agent
+            </button>
+        </div>
+
+        <div class="chatbot-controls">
+            <div id="ai-status" class="ai-status">
+                <span id="ai-status-indicator" class="status-indicator"></span>
+                <span id="ai-status-text">Checking...</span>
+            </div>
+            <button id="chatbot-toggle" class="chatbot-toggle">
+                <i class="fas fa-comments"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="chatbot-window" class="chatbot-window">
+        <div class="chatbot-messages" id="chatbot-messages">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div class="thought-process-container" id="thought-process-container" style="display: none;">
+            <div class="thought-process-content">
+                <i class="fas fa-brain fa-pulse thought-process-icon"></i>
+                <span id="thought-process-text">Processing...</span>
+                <div class="thought-process-steps">
+                    <div class="step-indicator">
+                        <span class="step-dot active" id="step-1"></span>
+                        <span class="step-dot" id="step-2"></span>
+                        <span class="step-dot" id="step-3"></span>
+                        <span class="step-dot" id="step-4"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chatbot-input">
+            <!-- Document Filter -->
+            <div class="document-filter-container" id="document-filter-container" style="display: none;">
+                <label for="document-filter">Filter by Document:</label>
+                <select id="document-filter">
+                    <option value="all">All Documents</option>
+                    <!-- Dynamic options will be added here by updateDocumentFilter() -->
+                </select>
+            </div>
+
+            <!-- Staged Image Preview -->
+            <div id="staged-image-preview" class="staged-image-preview" style="display: none;">
+                <div class="staged-image-item">
+                    <img id="staged-image-thumbnail" src="" alt="Image preview">
+                    <span class="staged-image-label"><i class="fas fa-image"></i> Image #1</span>
+                    <button id="remove-staged-image" class="remove-staged-image" title="Remove image">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="chatbot-input" placeholder="Ask me anything about QKD operations..." maxlength="500">
+                <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;">
+
+                <!-- Unified Tools Dropdown -->
+                <div class="tools-dropdown">
+                    <button id="tools-btn" class="tools-button" title="Tools">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <div id="tools-menu" class="tools-menu" style="display: none;">
+                        <!-- Upload Section -->
+                        <div class="menu-section">
+                            <div class="menu-section-header">
+                                <i class="fas fa-upload"></i> Upload
+                            </div>
+                            <button onclick="document.getElementById('image-upload').click()" class="menu-option">
+                                <i class="fas fa-camera"></i> Image
+                            </button>
+                            <button onclick="document.getElementById('pdf-upload').click()" class="menu-option">
+                                <i class="fas fa-file-pdf"></i> PDF Document
+                            </button>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="menu-divider"></div>
+
+                        <!-- Export Section -->
+                        <div class="menu-section">
+                            <div class="menu-section-header">
+                                <i class="fas fa-download"></i> Export Chat
+                            </div>
+                            <button onclick="exportChatAsPDF()" class="menu-option">
+                                <i class="fas fa-file-pdf"></i> PDF Report
+                            </button>
+                            <button onclick="exportChatAsHTML()" class="menu-option">
+                                <i class="fas fa-file-code"></i> HTML View
+                            </button>
+                            <button onclick="exportChatAsJSON()" class="menu-option">
+                                <i class="fas fa-code"></i> JSON (AI)
+                            </button>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="menu-divider"></div>
+
+                        <!-- Document Management Section -->
+                        <div class="menu-section">
+                            <div class="menu-section-header">
+                                <i class="fas fa-cog"></i> Manage Documents
+                            </div>
+                            <button onclick="openDocumentManager()" class="menu-option">
+                                <i class="fas fa-folder-open"></i> View Documents
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="voice-btn" class="voice-button" title="Voice input">
+                    <i class="fas fa-microphone" id="voice-icon"></i>
+                </button>
+                <button id="chatbot-send" class="send-button">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="input-footer">
+                <span id="char-counter">0/500</span>
+                <span id="typing-indicator" class="typing-indicator" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span id="typing-text">AI is thinking...</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resize handle for draggable resizing -->
+    <div id="chatbot-resize-handle" class="chatbot-resize-handle" title="Drag to resize chatbot"></div>
+</div>
+
+<!-- Document Manager Modal -->
+<div id="document-manager-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-folder-open"></i> Document Manager</h2>
+            <span class="modal-close" onclick="closeDocumentManager()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="document-list-loading" style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Loading documents...</p>
+            </div>
+            <div id="document-list-container" style="display: none;">
+                <div id="document-list-stats" style="margin-bottom: 20px; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                    <span id="doc-count">0 documents</span> |
+                    <span id="chunk-count">0 chunks</span>
+                </div>
+                <div id="document-list" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Document items will be inserted here -->
+                </div>
+            </div>
+            <div id="document-list-empty" style="display: none; text-align: center; padding: 40px;">
+                <i class="fas fa-folder-open fa-3x" style="color: #ccc;"></i>
+                <p style="margin-top: 20px; color: #666;">No documents found</p>
+                <p style="color: #999;">Upload PDF documents using the tools menu</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="refreshDocumentList()" class="btn-secondary">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+            <button onclick="closeDocumentManager()" class="btn-primary">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Load external chatbot JavaScript -->
+<script src="{{ url_for('static', filename='voice-recognition.js') }}"></script>
+<script src="{{ url_for('static', filename='chatbot.js') }}"></script>

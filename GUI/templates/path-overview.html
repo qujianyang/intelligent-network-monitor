@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'path.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('path_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'path.view_network' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('network_topology') }}" role="button">Network Topology</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_topology' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('topology_tracker') }}" role="button">Network Topology Change
+                    Tracker</a>
+            </li>
+            {% endif %}
+            {% if 'path.session.view_table' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('kmb_session') }}" role="button">KMB Session Overview</a>
+            </li>
+            {% endif %}
+            {% if 'policy.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_view') }}" role="button">Policy View and Configuration
+                    Rules</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_policies' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_audit') }}" role="button">Policy Audit</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <h3>Path Management Overview</h3>
+        <p>This section provides an overview of the current path management status, including key metrics.</p>
+        <div class="row row-cols-1 row-cols-md-5 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Session Compliance</h6>
+                        <h2 class="card-title text-success">92%</h2>
+                        <p class="card-text text-muted small">% of compliant sessions today</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Link Health</h6>
+                        <h2 class="card-title text-{{link_health[1]}}">{{ link_health[0] }}</h2>
+                        <p class="card-text text-muted small">Number of unstable links</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Resilience</h6>
+                        <h2 class="card-title text-info">12</h2>
+                        <p class="card-text text-muted small">Sessions used backup paths today</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Most Degraded Path</h6>
+                        <h2 class="card-title text-danger"> {{ top_5_degraded_links[0]['source_node_id'] }} → {{
+                            top_5_degraded_links[0]['destination_node_id'] }}</h2>
+                        <p class="card-text text-muted small">Highest instability score</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Blocked Sessions</h6>
+                        <h2 class="card-title text-danger">{{ blocked_sessions }}</h2>
+                        <p class="card-text text-muted small">Session requests rejected due to lack of QKD paths</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Top 3 Most Used Paths</h6>
+                        <table class="table table-bordered table-responsive">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Rank</th>
+                                    <th scope="col">Path</th>
+                                    <th scope="col">Session Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for path in converted_data_top_3 %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ path[0] | join('→ ')}}</td>
+                                    <td>{{ path[1] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Live Path Status</h6>
+                        <table class="table table-bordered table-responsive">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Health Status</th>
+                                    <th scope="col"># of Active Sessions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in live_path_status %}
+                                <tr>
+                                    <td><span class="badge bg-{{ data[0]}}">{{ data[1]}}</span></td>
+                                    <td>{{ data[2] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Top 5 Worst Links</h6>
+                        <table class="table table-bordered table-responsive">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Link</th>
+                                    <th scope="col">QBER (%)</th>
+                                    <th scope="col">Visibility (%)</th>
+                                    <th scope="col">QLQI (0-100)</th>
+                                    <th scope="col">Active Sessions</th>
+                                    <th scope="col">Severity</th>
+                                    <th scope="col">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for link in top_5_degraded_links %}
+                                <tr>
+                                    <td>{{link['source_node_id']}} → {{link['destination_node_id']}}</td>
+                                    <td>{{link['qber']}}</td>
+                                    <td>{{link['visibility']}}</td>
+                                    <td>{{link['qlqi']}}</td>
+                                    <td>{{link['active_session_count']}}</td>
+                                    <td><span class="badge bg-{{link['severity_color']}}">{{link['severity']}}</span></td>
+                                    <td>{{link['last_updated']}}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+</body>
+
+</html>

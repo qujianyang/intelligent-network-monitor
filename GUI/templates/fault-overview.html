@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Fault Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab">
+            {% if 'fault.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('fault_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'fault.view_details' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alarm_list') }}" role="button">Alarm List</a>
+            </li>
+            {% endif %}
+        </ul>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        <h3>Fault Management Overview</h3>
+        <p>Welcome to the Fault Management Dashboard. Here you can monitor the current status of the system,
+            view
+            active alarms, and manage fault conditions.</p>
+        <div class="row row-cols-1 row-cols-md-4 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Active Faults</h6>
+                        <h2 class="card-title text-danger">{{active_faults['num_active_faults']}}</h2>
+                        <p class="card-text text-muted small">Currently open or investigating</p>
+                    </div>
+                </div>
+            </div>
+            <!-- <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Avg. Time to Detect</h6>
+                        <h2 class="card-title text-primary">12 min</h2>
+                        <p class="card-text text-muted small">Average TTD for recent faults</p>
+                    </div>
+                </div>
+            </div> -->
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Avg. Time to Resolve</h6>
+                        <h2 class="card-title text-primary">{{average_time_to_resolve}} hr</h2>
+                        <p class="card-text text-muted small">Average TTR for resolved faults</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Avg. Time to Acknowledge</h6>
+                        <h2 class="card-title text-primary">{{average_time_to_acknowledge}} hr</h2>
+                        <p class="card-text text-muted small">Average TTA for resolved faults</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Escalated Faults</h6>
+                        <h2 class="card-title text-danger">{{active_faults['escalated']}}</h2>
+                        <p class="card-text text-muted small">Number of faults that have been escalated from alerts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="faultSourceBarChart" style="height:400px;"></canvas>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="totalAlarmChart" style="height:400px;"></canvas>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card shadow-sm">
+                    <canvas id="severityPieChart" style="height:400px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--Graphs-->
+    <script>
+
+        // Top Fault Sources
+        const faultSourceBarCtx = document.getElementById('faultSourceBarChart').getContext('2d');
+        new Chart(faultSourceBarCtx, {
+            type: 'bar',
+            data: {
+                labels: JSON.parse('{{ component_array| tojson }}'),
+                datasets: [{
+                    label: 'Alerts',
+                    data: JSON.parse('{{ component_count_array | tojson }}'),
+                    backgroundColor: ['purple', 'pink', 'blue']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // This allows canvas height to be used fully
+                plugins: {
+                    title: { display: true, text: 'Top Fault Sources' }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Faulty Component'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Alarms'
+                        },
+                        ticks: {
+                            stepSize: 1,   // Ensure the ticks are whole numbers
+                            callback: function (value, index, values) {
+                                return Number(value).toFixed(0);  // Ensure whole numbers only
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const pieData = {
+            labels: ['Critical', 'Warning'],
+            datasets: [{
+                data: [JSON.parse('{{ active_faults["critical"] | tojson  }}'), JSON.parse('{{ active_faults["warning"] | tojson  }}')],
+                backgroundColor: ['#e74a3b', '#f6c23e']  // red for critical, yellow for warning
+            }]
+        };
+
+        new Chart(document.getElementById('severityPieChart'), {
+            type: 'pie',
+            data: pieData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Alarm Severity Breakdown'
+                    }
+                }
+            }
+        });
+
+        const totalAlarmCtx = document.getElementById('totalAlarmChart').getContext('2d');
+
+        new Chart(totalAlarmCtx, {
+            type: 'line',
+            data: {
+                labels: JSON.parse('{{ dates | tojson }}'),
+                datasets: [
+                   
+                    {
+                        label: 'Total Alarms Detected',
+                        data: JSON.parse('{{ num_of_faults | tojson }}'),
+                        borderColor: 'pink',
+                        backgroundColor: 'pink',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Total Alarms Resolved',
+                        data: JSON.parse('{{ num_resolved_faults | tojson }}'),
+                        borderColor: 'green',
+                        backgroundColor: 'green',
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // This allows canvas height to be used fully
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Alarm Type Over Time'
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Alarms'
+                        },
+                        ticks: {
+                            stepSize: 1,   // Ensure the ticks are whole numbers
+                            callback: function (value, index, values) {
+                                return Number(value).toFixed(0);  // Ensure whole numbers only
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- User and Role Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'user.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'user.view_user' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('user') }}" role="button">Users</a>
+            </li>
+            {% endif %}
+            {% if 'role.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_role') }}" role="button">Roles</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_user_actions' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_audit') }}" role="button">User Audit Log</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>All Users</h3>
+        <p>This page provides a list of all users in the system</p>
+
+        <div class="row g-4 mb-2 align-items-center">
+            <!-- Status Filters -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Filter by Status:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Online" id="statusOmline"
+                        checked>
+                    <label class="form-check-label" for="statusOnline">Online</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Offline" id="statusOffline"
+                        checked>
+                    <label class="form-check-label" for="statusOffline">Offline</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Invited" id="statusInvited"
+                        checked>
+                    <label class="form-check-label" for="statusInvited">Invited</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Deactivated"
+                        id="statusDeactivated" checked>
+                    <label class="form-check-label" for="statusDeactivated">Deactivated</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Locked" id="statusLocked"
+                        checked>
+                    <label class="form-check-label" for="statusLocked">Locked</label>
+                </div>
+            </div>
+            <!-- Time Filter -->
+            <div class="col-md-6 d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label fw-bold">Filter By Time:</label> <br>
+                    <div class="btn-group" role="group" aria-label="Time filter buttons">
+                        <button type="button" class="btn btn-outline-primary" data-value="all">All</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="1h">Last 1 Hour</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="24h">Last 24 Hours</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="7d">Last 7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="custom"
+                            id="customButton">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom range picker (hidden initially) -->
+                <div class="d-flex gap-2 mt-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" />
+                    <input type="datetime-local" id="endTime" class="form-control" />
+                </div>
+            </div>
+
+            <!-- Create User -->
+            <div class="col-md-2 text-end">
+                <br>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createUserModal"
+                    title="Create User">
+                    <i class="bi bi-person-plus"></i> Create User
+                </button>
+            </div>
+        </div>
+        <table class="table table-bordered table-responsive" id="userTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Last Login</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="currentUserTable">
+                {% for user in users %}
+                <tr>
+                    <td>{{ user['name'] }}</td>
+                    <td>{{ user['email'] }}</td>
+                    <td>{{ user['role_name'] }}</td>
+                    <td>{{ user['last_login'] }}</td>
+                    <td>{{ user['status'] }}</td>
+                    <td>
+                        <div class="btn-group">
+                            {% if 'user.edit' in permissions %}
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#editUserModal" data-user-id="{{ user['uuid'] }}"
+                                data-fullname="{{ user['name'] }}" data-role="{{ user['role_name'] }}"
+                                data-status="{{ user['status'] }}"><i class="bi bi-pencil-square"></i> Edit</button>
+                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown"></button>
+                            <ul class="dropdown-menu">
+                                {% if user['status'] == 'Locked' %}
+                                <form method="POST" action="{{ url_for('auth.unlock_user') }}">
+                                    <input type="hidden" name="userId" value="{{ user['uuid'] }}">
+                                    <li><button type="submit" class="dropdown-item text-danger">Unlock</button></li>
+                                </form>
+                                {% endif %}
+                                {% if (user['status'] == 'Online' or user['status'] =='Offline') %}
+                                {% if 'user.send_reset_password' in permissions %}
+                                <li><a class="dropdown-item" href="#">Reset Password</a></li>
+                                {% endif %}
+                                {% if 'user.deactivate' in permissions %}
+                                <form method="POST" action="{{ url_for('auth.deactivate_user') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="userId" value="{{ user['uuid'] }}">
+                                    <li><button type="submit" class="dropdown-item text-danger">Deactivate</button></li>
+                                </form>
+                                {% endif %}
+                                {% endif %}
+                                {% if user['status'] == 'Invited' and 'user.send_invite' in permissions%}
+                                <li><a class="dropdown-item text-success" href="#">Invite</a></li>
+                                {% endif %}
+                                {% if user['status'] == 'Deactivated' and 'user.activate' in permissions%}
+                                <form method="POST" action="{{ url_for('auth.reactivate_user') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="userId" value="{{ user['uuid'] }}">
+                                    <li><button type="submit" class="dropdown-item text-success">Reactivate</button>
+                                    </li>
+                                </form>
+                                {% endif %}
+                                {% if user['approval'] == true and 'user.approve' in permissions%}
+                                <button type="button" class="dropdown-item text-success" data-bs-toggle="modal"
+                                data-bs-target="#approveRoleModal" data-user-id="{{ user['uuid'] }}" data-current-role="{{ user['role_name'] }}"
+                                data-role-approval-id = "{{ user['role_assignment_approval_id'] }}"
+                                data-approve-role="{{ user['role_requested'] }}" data-approve-role-value="{{ user['role_requested_id'] }}" >Approve Role</button>
+                                {% endif %}
+                                {% if 'user.assign_admin_roles' in permissions %}
+                                <form method="POST" action="{{ url_for('auth.assign_admin_roles') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="userId" value="{{ user['uuid'] }}">
+                                    <li><button type="submit" class="dropdown-item text-primary">Assign Admin</button>
+                                    </li>
+                                </form>
+                                {% endif %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createUserModalLabel">Create New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createUserForm" method="post" action="{{ url_for('auth.create_user') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="fullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="fullname" name="fullname"
+                                placeholder="Enter full name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                placeholder="Enter username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select" id="role" name="role" required>
+                                {% for role in roles %}
+                                <option value="{{ role['role_name'] }}">{{ role['role_name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="createUserForm" class="btn btn-primary">Create
+                        User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- edit user modal-->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm" method="post" action="{{ url_for('auth.edit_account') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="editFullname" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="editFullname" name="fullname"
+                                placeholder="Enter full name" required>
+                        </div>
+                        {% if 'user.assign_roles' in permissions %}
+                        <div class="mb-3">
+                            <label for="editRole" class="form-label">Role</label>
+                            <select class="form-select" id="editRole" name="role" required>
+                                {% for role in roles %}
+                                <option value="{{ role['role_name'] }}">{{ role['role_name'] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <input type="hidden" id="modal-user-id" name="userId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <form method="post" id="statusToggleForm">
+                        <input type="hidden" name="userId" id="status-modal-user-id">
+                        <button type="submit" id="toggleStatusBtn" class="btn"></button>
+                    </form>
+                    <button type="submit" form="editUserForm" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval User Role Modal-->
+    <div class="modal fade" id="approveRoleModal" tabindex="-1" aria-labelledby="approveRoleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approveRoleModalLabel">Request Role Approval</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="approveUserForm" method="post" action="{{ url_for('auth.approve_user') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="currentRole" class="form-label">Current Role: </label>
+                            <span id="currentRole" name="currentRole"></span>                        </div>
+                        <div class="mb-3">
+                            <label for="requestedRole" class="form-label">Requested Role: </label>
+                            <span id="requestedRole" name="requestedRole"></span>
+                            <input type="hidden" id="requestedRole-value" name="requestedRole-value">
+                        </div>
+                        <input type="hidden" id="modal-role-user-id" name="userId">
+                        <input type="hidden" name="modal-role-approval-id" id="modal-role-approval-id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" form="approveUserForm" class="btn btn-primary">Approve</button>
+                    <form method="POST" action="{{ url_for('auth.reject_user') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="userId" id="modal-role-user-reject-id">
+                        <input type="hidden" name="modal-role-reject-id" id="modal-role-reject-id">
+                        <div>
+                            <button type="submit" class="btn btn-danger">Reject</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+ 
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Table  -->
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const editButton = document.querySelectorAll('button[data-bs-target="#editUserModal"]');
+            editButton.forEach(button => {
+                button.addEventListener('click', function () {
+                    const userId = button.getAttribute('data-user-id');
+                    const fullname = button.getAttribute('data-fullname');
+                    const role = button.getAttribute('data-role');
+                    const status = button.getAttribute('data-status');
+
+                    document.getElementById('editFullname').value = fullname;
+                    document.getElementById('editRole').value = role;
+                    document.getElementById('modal-user-id').value = document.getElementById('status-modal-user-id').value = userId;
+
+                    const statusButton = document.getElementById('toggleStatusBtn');
+
+                    if (status === 'Deactivated') {
+                        statusButton.textContent = 'Reactivate';
+                        statusButton.classList.remove('btn-danger');
+                        statusButton.classList.add('btn-success');
+                        statusButton.setAttribute('formaction', "{{ url_for('auth.reactivate_user') }}");
+                    } else {
+                        statusButton.textContent = 'Deactivate';
+                        statusButton.classList.remove('btn-success');
+                        statusButton.classList.add('btn-danger');
+                        statusButton.setAttribute('formaction', "{{ url_for('auth.deactivate_user') }}");
+                    }
+
+                });
+            });
+
+            const approveButton = document.querySelectorAll('button[data-bs-target="#approveRoleModal"]');
+            approveButton.forEach(button => {
+                button.addEventListener('click', function () {
+                    const userId = button.getAttribute('data-user-id');
+                    const role = button.getAttribute('data-approve-role');
+                    const roleValue = button.getAttribute('data-approve-role-value');
+                    const currentRole = button.getAttribute('data-current-role');
+                    const approvalId = button.getAttribute('data-role-approval-id');
+
+                    document.getElementById('currentRole').textContent = currentRole;
+                    document.getElementById('requestedRole').textContent = role;
+                    document.getElementById('requestedRole-value').value = roleValue;
+                    document.getElementById('modal-role-user-id').value = userId;
+                    document.getElementById('modal-role-approval-id').value = approvalId;
+                    document.getElementById('modal-role-user-reject-id').value = userId;
+                    document.getElementById('modal-role-reject-id').value = approvalId;
+                });
+            });
+        });
+
+        $(document).ready(function () {
+            $('#userTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[0, "asc"]] // Default sort by "name" column
+            });
+        });
+
+        let selectedTimeWindow = 'all'; // Default
+
+        function filterTable() {
+            const statusFilters = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (selectedTimeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return; // Skip filter if dates are missing
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentUserTable tr');
+            rows.forEach(row => {
+                const status = row.cells[4].textContent.trim();
+                const timeText = row.cells[3].textContent.trim(); // "Time Detected"
+                const detectedTime = new Date(timeText);
+                const matchesTime = (selectedTimeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+                const matchesStatus = statusFilters.includes(status);
+
+                row.style.display = (matchesTime && matchesStatus) ? '' : 'none';
+            });
+        }
+
+        // Listen to filter buttons
+        document.querySelectorAll('.status-filter').forEach(cb => {
+            cb.addEventListener('change', filterTable);
+        });
+        document.querySelectorAll('[data-value]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Update selected value
+                selectedTimeWindow = this.getAttribute('data-value');
+
+                // Highlight active button
+                document.querySelectorAll('[data-value]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide custom range inputs
+                const isCustom = selectedTimeWindow === 'custom';
+                document.getElementById('customRangeInputs').classList.toggle('d-none', !isCustom);
+
+                filterTable(); // Run the filter
+            });
+        });
+
+        // Refilter when custom date inputs are changed
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+    </script>
+</body>
+
+</html>

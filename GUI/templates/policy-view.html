@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'path.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('path_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'path.view_network' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('network_topology') }}" role="button">Network Topology</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_topology' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('topology_tracker') }}" role="button">Network Topology Change
+                    Tracker</a>
+            </li>
+            {% endif %}
+            {% if 'path.session.view_table' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('kmb_session') }}" role="button">KMB Session Overview</a>
+            </li>
+            {% endif %}
+            {% if 'policy.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('policy_view') }}" role="button">Policy View and Configuration
+                    Rules</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_policies' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_audit') }}" role="button">Policy Audit</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>Policy View and Configuration Rules</h3>
+        <p class="text-muted">This section provides an overview of the policies and configuration rules applied to the
+            network. It includes details on policy types, their descriptions, and the associated configuration rules.
+        </p>
+        <div class="row g-2 mb-2 align-items-center">
+
+            <!-- Status Filters -->
+            <div class="col-md-10">
+                <label class="form-label fw-bold">Filter by Status:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Enabled" id="statusEnabled"
+                        checked>
+                    <label class="form-check-label" for="statusEnabled">Enabled</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Disabled" id="statusDisabled"
+                        checked>
+                    <label class="form-check-label" for="statusDisabled">Disabled</label>
+                </div>
+            </div>
+
+            <!-- Create Policy -->
+            {% if 'policy.create' in permissions %}
+            <div class="col-md-2 text-end">
+                <br>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createPolicyModal"
+                    title="Create Policy">
+                    <i class="bi bi-plus"></i> Create Policy
+                </button>
+            </div>
+            {% endif %}
+
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        
+        <table class="table table-bordered table-responsive" id="policyTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Policy Name</th>
+                    <th scope="col">Applies To</th>
+                    <th scope="col">Policy Type</th>
+                    <th scope="col">Rule Details</th>
+                    <th scope="col">Created</th>
+                    <th scope="col">Modified</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="currentPolicyTable">
+                {% for policy in policies %}
+                <tr>
+                    <td>{{ policy.policy_name }}</td>
+                    <td>{{ policy.scope }}</td>
+                    <td>{{ policy.policy_type }}</td>
+                    <td>{{ policy.description }}</td>
+                    <td>{{ policy.created_at.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                    <td>{{ policy.modified_at.strftime('%d-%m-%Y %H:%M:%S') }}</td>
+                    <td class="text-center">
+                        <span class="badge bg-{{ 'success' if policy.status == 'Enabled' else 'secondary' }}">
+                            {{ policy.status }}
+                        </span>
+                    </td>
+                    <td>{{ policy.created_by_name }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary btn-sm btn-view-policy" data-bs-toggle="modal"
+                                data-bs-target="#viewPolicyModal" data-policy-id="{{ policy.id }}">
+                                <i class="bi bi-pencil-square"></i> View
+                            </button>
+
+                            {% if policy.priority != 1%}
+                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown"></button>
+                            <ul class="dropdown-menu">
+                                {% if 'policy.edit' in permissions %}
+                                <li>
+                                    <button type="button" class="dropdown-item text-primary btn-edit-policy"
+                                        data-bs-toggle="modal" data-bs-target="#editPolicyModal"
+                                        data-policy-id="{{ policy.id }}">
+                                        Edit
+                                    </button>
+                                </li>
+                                {% endif %}
+                                {% if policy.status == 'Enabled' and 'policy.deactivate' in permissions %}
+                                <form method="POST" action="{{ url_for('policy_deactivate') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="policyId" value="{{ policy.id }}">
+                                    <li><button type="submit" class="dropdown-item text-danger">Deactivate</button></li>
+                                </form>
+                                {% elif policy.status == 'Disabled' and 'policy.activate' in permissions %}
+                                <form method="POST" action="{{ url_for('policy_activate') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="policyId" value="{{ policy.id }}">
+                                    <li><button type="submit" class="dropdown-item text-primary">Activate</button></li>
+                                </form>
+                                {% endif %}
+                                {% if 'policy.delete' in permissions %}
+                                <form method="POST" action="{{ url_for('policy_delete') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="policyId" value="{{ policy.id }}">
+                                    <li><button type="submit" class="dropdown-item text-danger">Delete</button></li>
+                                </form>
+                                {% endif %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create Policy Modal -->
+    <div class="modal fade" id="createPolicyModal" tabindex="-1" aria-labelledby="createPolicyModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createPolicyModalLabel">Create New Policy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createPolicyForm" method="post" action="{{ url_for('policy_create') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="policyname" class="form-label">Policy Name</label>
+                            <input type="text" class="form-control" id="policyname" name="policyname"
+                                placeholder="Enter Policy name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="policydescription" class="form-label">Policy Description</label>
+                            <textarea class="form-control" id="policydescription" name="policydescription"
+                                placeholder="Enter Policy description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="policytype" class="form-label">Policy Type</label>
+                            <select class="form-select" id="policytype" name="policytype" required>
+                                {% for key in policy_types %}
+                                <option value="{{ key }}">{{ key }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="policyscope" class="form-label">Policy Scope</label>
+                            <select class="form-select" id="policyscope" name="policyscope">
+                                {% for key in policy_scope %}
+                                <option value="{{ key }}">{{ key }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <!-- Metric Type Selection -->
+                        <div class="mb-3 d-none" id="metricSection">
+                            <label for="metricType" class="form-label">Select Metric</label>
+                            <select class="form-select" id="metricType" name="metricType">
+                                <option value="qber">QBER</option>
+                                <option value="visibility">Visibility</option>
+                                <option value="key rate">Key Rate</option>
+                                <option value="photon loss">Photon Loss</option>
+                                <option value="key pool">Key Pool Remaining</option>
+                            </select>
+                        </div>
+
+                        <!-- Weightage Type -->
+                        <div class="mb-3 d-none" id="weightageSection">
+                            <label for="weightageType" class="form-label">Weightage For</label>
+                            <select class="form-select" id="weightageType" name="weightageType">
+                                <option value="qlqi">QLQI</option>
+                                <option value="instability">Instability Score</option>
+                            </select>
+                        </div>
+
+                        <!-- Multiselect for Links -->
+                        <div class="mb-3 d-none" id="linkSelector">
+                            <label for="targetLinks" class="form-label">Select Target Links</label>
+                            <select class="form-select" id="targetLinks" name="targetLinks" multiple>
+                                {% for value in qkd_links.values() %}
+                                <option value="{{ value }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Multiselect for Nodes -->
+                        <div class="mb-3 d-none" id="nodeSelector">
+                            <label for="targetNodes" class="form-label">Select Target Nodes</label>
+                            <select class="form-select" id="targetNodes" name="targetNodes" multiple>
+                                {% for value in qkd_nodes.values() %}
+                                <option value="{{ value }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- RULE SECTION -->
+                        <div id="ruleSection" class="d-none">
+
+                            <!-- SECURITY RULES -->
+                            <div id="securityRules" class="d-none">
+                                <div class="mb-3">
+                                    <label for="loginAttempts" class="form-label">Max Login Attempts</label>
+                                    <input type="number" min="1" class="form-control" id="loginAttempts"
+                                        name="loginAttempts">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="rulenotes" rows="2"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Threshold Rules Section -->
+                            <div id="thresholdRules" class="d-none">
+                                <h6 class="fw-bold text-primary">Warning Threshold</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Threshold Value</label>
+                                    <input type="number" step="0.01" class="form-control"
+                                        name="threshold_value_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Duration Window (sec)</label>
+                                    <input type="number" class="form-control" name="duration_window_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Raise Delay</label>
+                                    <input type="number" class="form-control" name="raise_delay_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Clear Condition</label>
+                                    <input type="number" step="1" class="form-control" name="clear_condition_warning">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="rule_notes_warning" rows="2"></textarea>
+                                </div>
+
+                                <hr>
+
+                                <h6 class="fw-bold text-danger">Critical Threshold</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Threshold Value</label>
+                                    <input type="number" step="0.01" class="form-control"
+                                        name="threshold_value_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Duration Window (sec)</label>
+                                    <input type="number" class="form-control" name="duration_window_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Raise Delay</label>
+                                    <input type="number" class="form-control" name="raise_delay_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Clear Condition</label>
+                                    <input type="number" step="1" class="form-control" name="clear_condition_critical">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="rule_notes_critical" rows="2"></textarea>
+                                </div>
+                            </div>
+
+
+                            <!-- WEIGHTAGE RULES -->
+                            <div id="weightageRules" class="d-none">
+                                <div class="mb-3">
+                                    <label for="qberWeight" class="form-label">QBER Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="qberWeight"
+                                        name="qberWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="visibilityWeight" class="form-label">Visibility Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="visibilityWeight"
+                                        name="visibilityWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="keyRateWeight" class="form-label">Key Rate Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="keyRateWeight"
+                                        name="keyRateWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="photonLossWeight" class="form-label">Photon Loss Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="photonLossWeight"
+                                        name="photonLossWeight">
+                                </div>
+                                <small class="text-muted">* All weights must sum to 1.0</small>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="createPolicyForm" class="btn btn-primary">Create
+                        Policy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Policy Modal  -->
+    <div class="modal fade" id="viewPolicyModal" tabindex="-1" aria-labelledby="viewPolicyModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewPolicyModalLabel">Policy Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group">
+                        <strong>Policy Details:</strong>
+                        <li class="list-group-item"><strong>Name:</strong> <span id="v-policy-name"></span></li>
+                        <li class="list-group-item"><strong>Type:</strong> <span id="v-policy-type"></span></li>
+                        <li class="list-group-item"><strong>Scope:</strong> <span id="v-policy-scope"></span></li>
+                        <li class="list-group-item"><strong>Status:</strong> <span id="v-policy-status"></span></li>
+                        <li class="list-group-item"><strong>Description:</strong> <span id="v-policy-desc"></span></li>
+                        <li class="list-group-item"><strong>Created At:</strong> <span id="v-policy-created-at"></span>
+                        </li>
+                        <li class="list-group-item"><strong>Modified At:</strong> <span
+                                id="v-policy-modified-at"></span></li>
+                        <li class="list-group-item"><strong>Created By:</strong> <span id="v-policy-created-by"></span>
+                        </li>
+                    </ul>
+                    <br>
+                    <ul class="list-group" id="v-policy-rules">
+                        <!-- JS will inject <li> for each rule -->
+                    </ul>
+                    <br>
+                    <ul class="list-group" id="v-policy-targets">
+                        <!-- JS will inject <li> for each target -->
+                    </ul>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Policy Modal -->
+    <div class="modal fade" id="editPolicyModal" tabindex="-1" aria-labelledby="editPolicyModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editPolicyModalLabel">Edit Policy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPolicyForm" method="post" action="{{ url_for('policy_edit') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="policy_id" id="edit-policy-id">
+                        <div class="mb-3">
+                            <label for="edit-policyname" class="form-label">Policy Name</label>
+                            <input type="text" class="form-control" id="edit-policyname" name="edit-policyname"
+                                placeholder="Enter Policy name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="policyscope" class="form-label">Policy Scope</label>
+                            <span id="edit-policyscope" name="edit-policyscope"></span>
+                            <input type="hidden" id="edit-policyscope-value" name="edit-policyscope-value">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-policytype" class="form-label">Policy Type:</label>
+                            <span id="edit-policytype" name="edit-policytype"></span>
+                            <input type="hidden" id="edit-policytype-value" name="edit-policytype-value">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-policydescription" class="form-label">Policy Description</label>
+                            <textarea class="form-control" id="edit-policydescription" name="edit-policydescription"
+                                placeholder="Enter Policy description" rows="3"></textarea>
+                        </div>
+                        <!-- Metric Type Selection -->
+                        <div class="mb-3 d-none" id="edit-metricSection">
+                            <label for="edit-metric" class="form-label">Metric:</label>
+                            <span id="edit-metric"></span>
+                            <input type="hidden" id="edit-metric-value" name="edit-metric-value">
+                        </div>
+
+                        <!-- Weightage Type -->
+                        <div class="mb-3 d-none" id="edit-weightageSection">
+                            <label for="edit-weightageType" class="form-label">Weightage For:</label>
+                            <span id="edit-weightageType"></span>
+                        </div>
+
+                        <!-- Multiselect for Links -->
+                        <div class="mb-3 d-none" id="edit-linkSelector">
+                            <label for="targetLinks" class="form-label">Select Target Links</label>
+                            <select class="form-select" id="edit-targetLinks" name="edit-targetLinks" multiple>
+                                {% for value in qkd_links.values() %}
+                                <option value="{{ value }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Multiselect for Nodes -->
+                        <div class="mb-3 d-none" id="edit-nodeSelector">
+                            <label for="targetNodes" class="form-label">Select Target Nodes</label>
+                            <select class="form-select" id="edit-targetNodes" name="edit-targetNodes" multiple>
+                                {% for value in qkd_nodes.values() %}
+                                <option value="{{ value }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- RULE SECTION -->
+                        <div id="edit-ruleSection" class="d-none">
+
+                            <!-- SECURITY RULES -->
+                            <div id="edit-securityRules" class="d-none">
+                                <div class="mb-3">
+                                    <label for="edit-loginAttempts" class="form-label">Max Login Attempts</label>
+                                    <input type="number" min="1" class="form-control" id="edit-loginAttempts"
+                                        name="edit-loginAttempts">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="edit-rulenotes" id="edit-rulenotes"
+                                        rows="2"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Threshold Rules Section -->
+                            <div id="edit-thresholdRules" class="d-none">
+                                <h6 class="fw-bold text-primary">Warning Threshold</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Threshold Value</label>
+                                    <input type="number" step="0.01" class="form-control"
+                                        name="edit_threshold_value_warning" id="edit_threshold_value_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Duration Window (sec)</label>
+                                    <input type="number" class="form-control" name="edit_duration_window_warning" id="edit_duration_window_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Raise Delay</label>
+                                    <input type="number" class="form-control" name="edit_raise_delay_warning" id="edit_raise_delay_warning">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Clear Condition</label>
+                                    <input type="number" step="1" class="form-control" name="edit_clear_condition_warning" id="edit_clear_condition_warning">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="edit_rule_notes_warning" id="edit_rule_notes_warning" rows="2"></textarea>
+                                </div>
+
+                                <hr>
+
+                                <h6 class="fw-bold text-danger">Critical Threshold</h6>
+                                <div class="mb-2">
+                                    <label class="form-label">Threshold Value</label>
+                                    <input type="number" step="0.01" class="form-control"
+                                        name="edit_threshold_value_critical" id="edit_threshold_value_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Duration Window (sec)</label>
+                                    <input type="number" class="form-control" name="edit_duration_window_critical" id="edit_duration_window_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Raise Delay</label>
+                                    <input type="number" class="form-control" name="edit_raise_delay_critical" id="edit_raise_delay_critical">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Clear Condition</label>
+                                    <input type="number" step="1" class="form-control" name="edit_clear_condition_critical" id="edit_clear_condition_critical">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Notes</label>
+                                    <textarea class="form-control" name="edit_rule_notes_critical" id="edit_rule_notes_critical" rows="2"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- WEIGHTAGE RULES -->
+                            <div id="edit-weightageRules" class="d-none">
+                                <div class="mb-3">
+                                    <label for="qberWeight" class="form-label">QBER Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit-qberWeight"
+                                        name="edit-qberWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="visibilityWeight" class="form-label">Visibility Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit-visibilityWeight"
+                                        name="edit-visibilityWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="keyRateWeight" class="form-label">Key Rate Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit-keyRateWeight"
+                                        name="edit-keyRateWeight">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="photonLossWeight" class="form-label">Photon Loss Weight</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit-photonLossWeight"
+                                        name="edit-photonLossWeight">
+                                </div>
+                                <small class="text-muted">* All weights must sum to 1.0</small>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="editPolicyForm" class="btn btn-primary">Edit
+                        Policy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Table  -->
+    <script>
+        $(document).ready(function () {
+            $('#policyTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+            });
+        });
+
+
+        function filterTable() {
+            const statusFilters = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+
+            const rows = document.querySelectorAll('#currentPolicyTable tr');
+            rows.forEach(row => {
+                const status = row.cells[6].textContent.trim();
+                const matchesStatus = statusFilters.includes(status);
+
+                row.style.display = (matchesStatus) ? '' : 'none';
+            });
+        }
+
+        // Listen to filter buttons
+        document.querySelectorAll('.status-filter').forEach(cb => {
+            cb.addEventListener('change', filterTable);
+        });
+    </script>
+
+    <script>
+        const allPolicies = JSON.parse('{{ policies | tojson | safe }}');
+        document.addEventListener('DOMContentLoaded', function () {
+            const viewButtons = document.querySelectorAll('.btn-view-policy');
+
+            viewButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const policyId = parseInt(button.dataset.policyId);
+                    const policy = allPolicies.find(p => p.id === policyId);
+
+                    if (policy) {
+                        // Update the modal with basic policy info
+                        document.getElementById('v-policy-name').innerText = policy.policy_name;
+                        document.getElementById('v-policy-scope').innerText = policy.scope;
+                        document.getElementById('v-policy-type').innerText = policy.policy_type;
+                        document.getElementById('v-policy-desc').innerText = policy.description;
+                        document.getElementById('v-policy-created-at').innerText = policy.created_at;
+                        document.getElementById('v-policy-modified-at').innerText = policy.modified_at;
+                        document.getElementById('v-policy-status').innerText = policy.status;
+                        document.getElementById('v-policy-created-by').innerText = policy.created_by_name;
+
+
+                        // 🧠 Display the rules dynamically
+                        const rulesList = document.getElementById('v-policy-rules');
+                        rulesList.innerHTML = ''; // clear old content
+                        rulesList.innerHTML = '<strong>Rules:</strong>'; // add header
+                        policy.rules.forEach(rule => {
+                            const li = document.createElement('li');
+                            li.classList.add('list-group-item');
+                            li.innerHTML = '';
+                            if (rule.severity !== null && rule.severity !== undefined) {
+                                li.innerHTML += `<strong>Severity</strong>: ${rule.severity} <br>`;
+                            }
+                            li.innerHTML += `<strong>Rule</strong>: ${rule.metric} ${rule.condition} ${rule.value}`;
+                            if (policy.policy_type === 'Threshold') {
+                                li.innerHTML += `<br><strong>Duration Window</strong>: ${rule.duration_window} seconds`;
+                                li.innerHTML += `<br><strong>Raise Delay</strong>: ${rule.raise_delay} seconds`;
+                                li.innerHTML += `<br><strong>Clear Condition</strong>: ${rule.clear_condition}`;
+                            }
+                            li.innerHTML += `<br><strong>Notes</strong>: ${rule.notes}`;
+                            li.classList.add('list-group-item');
+                            rulesList.appendChild(li);
+                        });
+
+                        // 🧠 Display targets
+                        const targetsList = document.getElementById('v-policy-targets');
+                        targetsList.innerHTML = '';
+                        // Check if there are targets before adding the header
+                        if (policy.targets && policy.targets.length > 0) {
+                            targetsList.innerHTML = '<strong>Targets:</strong>'; // Add header if there are targets
+
+                            policy.targets.forEach(target => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `<strong>${target.target_type}</strong>: ${target.target_name}`;
+
+                                // Add the class "list-group-item"
+                                li.classList.add('list-group-item');
+
+                                // Append the list item to the targets list
+                                targetsList.appendChild(li);
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const editButtons = document.querySelectorAll('.btn-edit-policy');
+            editButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const policyId = parseInt(button.dataset.policyId);
+                    const policy = allPolicies.find(p => p.id === policyId);
+                    if (!policy) return;
+
+                    // Populate base fields
+                    document.getElementById('edit-policy-id').value = policy.id;
+                    document.getElementById('edit-policyname').value = policy.policy_name;
+                    document.getElementById('edit-policyscope').innerText = policy.scope;
+                    document.getElementById('edit-policyscope-value').value = policy.scope;
+                    document.getElementById('edit-policytype').innerText = policy.policy_type;
+                    document.getElementById('edit-policytype-value').value = policy.policy_type;
+                    document.getElementById('edit-policydescription').value = policy.description;
+                    
+                    updateEditFormDisplay();
+                    document.getElementById('edit-policyscope').addEventListener('change', updateEditFormDisplay);
+                    // Trigger form logic (show/hide rule sections etc.)
+                    document.getElementById('edit-policytype').dispatchEvent(new Event('change'));
+                    document.getElementById('edit-policyscope').dispatchEvent(new Event('change'));
+
+                    // Populate rule-specific fields (example for threshold rules)
+                    if (policy.policy_type === 'Threshold') {
+                        const rules = policy.rules;
+                        const warningRule = rules.find(r => r.severity === 'warning');
+                        const criticalRule = rules.find(r => r.severity === 'critical');
+                        document.getElementById('edit-metric').innerText = policy.purpose;
+                        document.getElementById('edit-metric-value').value = policy.purpose;
+
+                        if (warningRule) {
+                            document.getElementById('edit_threshold_value_warning').value = warningRule.value;
+                            document.getElementById('edit_duration_window_warning').value = warningRule.duration_window;
+                            document.getElementById('edit_raise_delay_warning').value = warningRule.raise_delay;
+                            document.getElementById('edit_rule_notes_warning').value = warningRule.notes;
+                        }
+
+                        if (criticalRule) {
+                            document.getElementById('edit_threshold_value_critical').value = criticalRule.value;
+                            document.getElementById('edit_duration_window_critical').value = criticalRule.duration_window;
+                            document.getElementById('edit_raise_delay_critical').value = criticalRule.raise_delay;
+                            document.getElementById('edit_rule_notes_critical').value = criticalRule.notes;
+                        }
+                    }
+
+                    // Populate weightage rule
+                    if (policy.policy_type === 'Weightage') {
+                        const rules = policy.rules;
+                        const qberRule = rules.find(r => r.metric === 'qber');
+                        const visibilityRule = rules.find(r => r.metric === 'visibility');
+                        const keyRateRule = rules.find(r => r.metric === 'key rate');
+                        const photonLossRule = rules.find(r => r.metric === 'photon loss');
+                        document.getElementById('edit-weightageType').innerText = policy.purpose;
+                        document.getElementById('edit-qberWeight').value = qberRule.value;
+                        document.getElementById('edit-visibilityWeight').value = visibilityRule.value;
+                        document.getElementById('edit-keyRateWeight').value = keyRateRule.value;
+                        document.getElementById('edit-photonLossWeight').value = photonLossRule.value;
+                    }
+
+                    // Security rule
+                    if (policy.policy_type === 'Security') {
+                        const rule = policy.rules[0];
+                        document.getElementById('edit-loginAttempts').value = rule.value;
+                        document.getElementById('edit-rulenotes').value = rule.notes;
+                        scopeSection.classList.add('d-none');
+
+                    }
+                });
+                updateEditFormDisplay();
+
+            });
+        });
+
+        
+
+        function updateEditFormDisplay() {
+            const type = document.getElementById('edit-policytype').innerText;
+            const scope = document.getElementById('edit-policyscope').innerText;
+
+            const scopeSection = document.getElementById('edit-policyscope').closest('.mb-3');
+            const metricSection = document.getElementById('edit-metricSection');
+            const weightageSection = document.getElementById('edit-weightageSection');
+            const linkSelector = document.getElementById('edit-linkSelector');
+            const nodeSelector = document.getElementById('edit-nodeSelector');
+            const ruleSection = document.getElementById('edit-ruleSection');
+            const securityRules = document.getElementById('edit-securityRules');
+            const thresholdRules = document.getElementById('edit-thresholdRules');
+            const weightageRules = document.getElementById('edit-weightageRules');
+
+            // Hide all by default
+            metricSection.classList.add('d-none');
+            weightageSection.classList.add('d-none');
+            linkSelector.classList.add('d-none');
+            nodeSelector.classList.add('d-none');
+            ruleSection.classList.add('d-none');
+            scopeSection.classList.remove('d-none');
+            securityRules.classList.add('d-none');
+            thresholdRules.classList.add('d-none');
+            weightageRules.classList.add('d-none');
+
+            if (type === 'Threshold') {
+                ruleSection.classList.remove('d-none');
+                thresholdRules.classList.remove('d-none');
+                metricSection.classList.remove('d-none');
+                if (scope === 'Link') {
+                    linkSelector.classList.remove('d-none');
+                } else if (scope === 'Node') {
+                    nodeSelector.classList.remove('d-none');
+                }
+            } else if (type === 'Weightage') {
+                ruleSection.classList.remove('d-none');
+                weightageRules.classList.remove('d-none');
+                weightageSection.classList.remove('d-none');
+                scopeSection.classList.add('d-none');
+            } else if (type === 'Security') {
+                ruleSection.classList.remove('d-none');
+                securityRules.classList.remove('d-none');
+                scopeSection.classList.add('d-none');
+            }
+        }
+
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const policyType = document.getElementById('policytype');
+            const policyScope = document.getElementById('policyscope');
+
+            const scopeSection = document.getElementById('policyscope').closest('.mb-3');
+            const metricSection = document.getElementById('metricSection');
+            const weightageSection = document.getElementById('weightageSection');
+            const linkSelector = document.getElementById('linkSelector');
+            const nodeSelector = document.getElementById('nodeSelector');
+
+            function updateForm() {
+                const type = policyType.value;
+                const scope = policyScope.value;
+
+                // Reset all optional sections
+                scopeSection.classList.remove('d-none');
+                metricSection.classList.add('d-none');
+                weightageSection.classList.add('d-none');
+                linkSelector.classList.add('d-none');
+                nodeSelector.classList.add('d-none');
+
+                if (type === 'Threshold') {
+                    metricSection.classList.remove('d-none');
+                    scopeSection.classList.remove('d-none');
+
+                    if (scope === 'Link') {
+                        linkSelector.classList.remove('d-none');
+                    } else if (scope === 'Node') {
+                        nodeSelector.classList.remove('d-none');
+                    }
+                } else if (type === 'Weightage') {
+                    scopeSection.classList.add('d-none');
+                    weightageSection.classList.remove('d-none');
+                } else if (type === 'Security') {
+                    scopeSection.classList.add('d-none');
+                    // Additional logic if needed
+                }
+            }
+
+            policyType.addEventListener('change', updateForm);
+            policyScope.addEventListener('change', updateForm);
+
+            updateForm();  // Initial trigger on page load
+        });
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const typeField = document.getElementById('policytype');
+            const scopeField = document.getElementById('policyscope');
+            const metricField = document.getElementById('metricType');
+            const conditionField = document.getElementById('condition');
+            const raiseDelayLabel = document.getElementById('raiseDelayContainer');
+            const ruleSection = document.getElementById('ruleSection');
+
+            const securityRules = document.getElementById('securityRules');
+            const thresholdRules = document.getElementById('thresholdRules');
+            const weightageRules = document.getElementById('weightageRules');
+
+            function updateRuleForm() {
+                const selectedType = typeField.value;
+                ruleSection.classList.remove('d-none');
+                securityRules.classList.add('d-none');
+                thresholdRules.classList.add('d-none');
+                weightageRules.classList.add('d-none');
+
+                if (selectedType === 'Security') {
+                    securityRules.classList.remove('d-none');
+                } else if (selectedType === 'Threshold') {
+                    thresholdRules.classList.remove('d-none');
+                } else if (selectedType === 'Weightage') {
+                    weightageRules.classList.remove('d-none');
+                }
+            }
+
+            function updateRaiseDelayLabel() {
+                const metric = metricField?.value;
+                if (!metric) return;
+
+                const label = document.querySelector("label[for='raiseDelay']");
+                if (['qber'].includes(metric)) {
+                    label.textContent = "Raise Delay (in seconds)";
+                } else {
+                    label.textContent = "Raise Delay (consecutive breaches)";
+                }
+            }
+
+            typeField.addEventListener('change', updateRuleForm);
+            metricField?.addEventListener('change', updateRaiseDelayLabel);
+
+            updateRuleForm();  // Initial load
+            updateRaiseDelayLabel();
+        });
+    </script>
+
+</body>
+
+</html>

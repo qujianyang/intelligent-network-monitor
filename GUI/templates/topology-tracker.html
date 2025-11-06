@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'path.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('path_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'path.view_network' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('network_topology') }}" role="button">Network Topology</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_topology' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('topology_tracker') }}" role="button">Network Topology Change
+                    Tracker</a>
+            </li>
+            {% endif %}
+            {% if 'path.session.view_table' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('kmb_session') }}" role="button">KMB Session Overview</a>
+            </li>
+            {% endif %}
+            {% if 'policy.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_view') }}" role="button">Policy View and Configuration
+                    Rules</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_policies' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_audit') }}" role="button">Policy Audit</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>Topology Change Tracker Table</h3>
+        <p class="text-muted">This table tracks changes in the network topology, including added, removed, and modified
+            nodes and links.</p>
+        <div class="row g-3 mb-3 align-items-center">
+            <div class="col-md-11 d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label fw-bold">Filter By Time:</label> <br>
+                    <div class="btn-group" role="group" aria-label="Time filter buttons">
+                        <button type="button" class="btn btn-outline-primary" data-value="all">All</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="1h">Last 1 Hour</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="24h">Last 24 Hours</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="7d">Last 7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="custom"
+                            id="customButton">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom range picker (hidden initially) -->
+                <div class="d-flex gap-2 mt-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" />
+                    <input type="datetime-local" id="endTime" class="form-control" />
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% set category, message = messages[-1] %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
+            {% endwith %}
+            <div class="d-flex justify-content-between align-items-end flex-wrap mb-3 gap-3">
+
+                <form method="get" class="d-flex align-items-end flex-wrap gap-2">
+                    <label for="per_page" class="form-label me-2">Rows per page:</label>
+                    <select name="per_page" id="per_page" class="form-select d-inline w-auto me-2"
+                        onchange="this.form.submit()">
+                        {% for option in [5, 10, 20, 50, 100] %}
+                        <option value="{{ option }}" {% if per_page==option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="page" value="1">
+                    <input id="searchInput" type="text" name="search" value="{{ search_query }}" placeholder="Search..."
+                        class="form-control d-inline w-auto me-2" />
+
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+
+                <!-- Export Buttons -->
+                <div class="d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-success me-2" onclick="exportToExcel()"
+                        title="Export to Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <table class="table table-bordered table-responsive" id="topologyTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Log ID</th>
+                    <th scope="col">Change Type</th>
+                    <th scope="col">Components Affected</th>
+                    <th scope="col">Current State</th>
+                    <th scope="col">Notes</th>
+                    <th scope="col">Performed By</th>
+                </tr>
+            </thead>
+            <tbody id="currentTopologyTable">
+                {% for change in topology_changes %}
+                <tr>
+                    <td>{{ change.changed_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ change.log_id }}</td>
+                    <td>{{ change.change_type }}</td>
+                    <td>{{ change.component }}</td>
+                    <td>{{ change.current_state }}</td>
+                    <td>{{ change.notes }}</td>
+                    <td>{{ change.performed_by_name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="?page={{ current_page - 1 }}&per_page={{ per_page }}&search={{ search_query }}">Previous</a>
+                </li>
+
+                {% for page_num in range(1, total_pages + 1) %}
+                <li class="page-item {% if current_page == page_num %}active{% endif %}">
+                    <a class="page-link"
+                        href="?page={{ page_num }}&per_page={{ per_page }}&search={{ search_query }}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+
+                <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="?page={{ current_page + 1 }}&per_page={{ per_page }}&search={{ search_query }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+
+
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+   <script>
+        let selectedTimeWindow = 'all';
+
+        function formatDateISO(date) {
+            return date.toISOString().slice(0, 19); // "YYYY-MM-DDTHH:MM:SS"
+        }
+
+        function applyTimeFilter() {
+            const now = new Date();
+            let startTime = '';
+            let endTime = formatDateISO(now);
+
+            if (selectedTimeWindow === '1h') {
+                startTime = formatDateISO(new Date(now.getTime() - 60 * 60 * 1000));
+            } else if (selectedTimeWindow === '24h') {
+                startTime = formatDateISO(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+            } else if (selectedTimeWindow === '7d') {
+                startTime = formatDateISO(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
+            } else if (selectedTimeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return;
+                startTime = startInput;
+                endTime = endInput;
+            }
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("page", 1); // Reset pagination
+            url.searchParams.set("per_page", "{{ per_page }}");
+            url.searchParams.set("search", "{{ search_query }}");
+
+            if (selectedTimeWindow === 'all') {
+                url.searchParams.delete("start_time");
+                url.searchParams.delete("end_time");
+            } else {
+                url.searchParams.set("start_time", startTime);
+                url.searchParams.set("end_time", endTime);
+            }
+
+            window.location.href = url.toString();
+        }
+
+        // Event listeners for predefined time buttons
+        document.querySelectorAll('[data-value]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                selectedTimeWindow = this.getAttribute('data-value');
+
+                document.querySelectorAll('[data-value]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const isCustom = selectedTimeWindow === 'custom';
+                document.getElementById('customRangeInputs').classList.toggle('d-none', !isCustom);
+
+                if (!isCustom) {
+                    applyTimeFilter();
+                }
+            });
+        });
+
+        // Custom range change listener
+        document.getElementById('startTime').addEventListener('change', () => {
+            if (selectedTimeWindow === 'custom') {
+                applyTimeFilter();
+            }
+        });
+
+        document.getElementById('endTime').addEventListener('change', () => {
+            if (selectedTimeWindow === 'custom') {
+                applyTimeFilter();
+            }
+        });
+    </script>
+
+    <script>
+        function getTimeParams() {
+            const params = new URLSearchParams(window.location.search);
+            const start = params.get('start_time');
+            const end = params.get('end_time');
+            return { start, end };
+        }
+
+
+        function getSearchQuery() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('search') || '';
+        }
+
+        function exportToExcel() {
+            console.log('Export to Excel clicked');
+            const { start, end } = getTimeParams();
+            const searchQuery = getSearchQuery();
+            let url = `/topology-tracker?export=excel`;
+            if (searchQuery) {
+                url += `&search=${searchQuery}`;
+            }
+            if (start && end) url += `&start_time=${start}&end_time=${end}`;
+
+            console.log('Redirecting to:', url);
+            window.location.href = url;
+        }
+
+        function exportToPDF() {
+            console.log('Export to PDF clicked');
+            const { start, end } = getTimeParams();
+            const searchQuery = getSearchQuery();
+            let url = `/topology-tracker?export=pdf`;
+            if (searchQuery) {
+                url += `&search=${searchQuery}`;
+            }
+            if (start && end) url += `&start_time=${start}&end_time=${end}`;
+            console.log('Redirecting to:', url);
+            window.location.href = url;
+        }
+    </script>
+</body>
+
+</html>

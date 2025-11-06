@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Access Denied</title>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    {% include "common/navbar.html" %}
+    <div class="cards">
+<!-- Include the navbar-->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% set category, message = messages[-1] %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+    {% endwith %}
+    <h1>403 - Unauthorized</h1>
+    <p>You do not have permission to access this page.</p>
+    </div>
+</body>
+
+</html>

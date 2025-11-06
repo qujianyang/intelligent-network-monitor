@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+    <style>
+        #cy {
+            width: 100%;
+            height: 90vh;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Main dashboard content (Home Page: QBER pie) -->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'path.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('path_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'path.view_network' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('network_topology') }}" role="button">Network Topology</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_topology' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('topology_tracker') }}" role="button">Network Topology Change
+                    Tracker</a>
+            </li>
+            {% endif %}
+            {% if 'path.session.view_table' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('kmb_session') }}" role="button">KMB Session Overview</a>
+            </li>
+            {% endif %}
+            {% if 'policy.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_view') }}" role="button">Policy View and Configuration
+                    Rules</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_policies' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('policy_audit') }}" role="button">Policy Audit</a>
+            </li>
+            {% endif %}
+        </ul>
+        <div class="row">
+            <h3 class="col-sm-10">Network Topology</h3>
+            <div class="col-sm-2 text-end">
+                {% if 'path.node.create' in permissions %}
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createNodeModal">Create
+                    Node</button>
+                {% endif %}
+                {% if 'path.link.create' in permissions %}
+                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#createLinkModal">Create
+                    Link</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-3 p-3 border bg-light">
+            <div class="row">
+                <div class="col-sm-10">
+                    <h5>Legend</h5>
+                    <ul class="list-inline">
+                        <li class="list-inline-item"><span class="badge text-bg-success">&nbsp;&nbsp;</span> Online</li>
+                        <li class="list-inline-item"><span class="badge text-bg-secondary">&nbsp;&nbsp;</span> Offline
+                        </li>
+                        <li class="list-inline-item"><span class="badge text-bg-warning">&nbsp;&nbsp;</span> Warning
+                        </li>
+                        <li class="list-inline-item"><span class="badge text-bg-danger">&nbsp;&nbsp;</span> Critical
+                        </li>
+                        <li class="list-inline-item"><span class="badge text-bg-primary">&nbsp;&nbsp;</span> Temporary
+                        </li>
+                        <li class="list-inline-item"><i class="bi bi-circle"></i> QKD</li>
+                        <li class="list-inline-item"><i class="bi bi-square"></i> Router</li>
+                        <li class="list-inline-item"><i class="bi bi-diamond"></i> Switch</li>
+                        <li class="list-inline-item"><i class="bi bi-hexagon"></i> KMS</li>
+                        <li class="list-inline-item"><i class="bi bi-triangle"></i> Consumer</li>
+                    </ul>
+                </div>
+                <p class="col-sm-2">
+                    <strong>Online Devices:</strong> {{ online_devices }} / {{ total_devices }} <br>
+                    <strong>Temp Devices:</strong> {{ temporary_devices}}
+                </p>
+            </div>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        <br>
+        <div id="cy"></div>
+
+
+
+        <!-- Modal -->
+        <!-- Bootstrap Modal for Nodes -->
+        <div class="modal fade" id="deviceModal" tabindex="-1" role="dialog" aria-labelledby="deviceModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="deviceModalLabel">Device Info</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="deviceDetails" class="list-group">
+                            <!-- Will be filled with JS -->
+                        </ul>
+                        <div id="deviceActions" style="display: none;">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Link Modal -->
+        <div class="modal fade" id="linkModal" tabindex="-1" role="dialog" aria-labelledby="linkModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title" id="linkModalLabel">Link Info</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="linkDetails" class="list-group">
+                            <!-- JS fills this -->
+                        </ul>
+                        <div id="linkActions" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Node Modal -->
+        <div class="modal fade" id="createNodeModal" tabindex="-1" aria-labelledby="createNodeModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createNodeModalLabel">Create Node</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="createNodeForm" method="POST" action="/create-node">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="mb-3">
+                                <label for="nodeType" class="form-label">Node Type</label>
+                                <select class="form-select" id="nodeType" name="nodeType" required>
+                                    <option value="Router">Router</option>
+                                    <option value="QKD">QKD</option>
+                                    <option value="Switch">Switch</option>
+                                    <option value="KMS">KMS</option>
+                                    <option value="Consumer">Consumer</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nodeStatus" class="form-label">Status</label>
+                                <select class="form-select" id="nodeStatus" name="nodeStatus" required>
+                                    <option value="Online">Online</option>
+                                    <option value="Offline">Offline</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nodeSite" class="form-label">Site</label>
+                                <select class="form-select" id="nodeSite" name="nodeSite" required>
+                                    <option value="Site_A">Site A</option>
+                                    <option value="Site_B">Site B</option>
+                                    <option value="Site_C">Site C</option>
+                                </select>
+                            </div>
+
+                            <!-- Conditional field for QKD nodes -->
+                            <div class="mb-3" id="aggregatedKeyRateField" style="display: none;">
+                                <label for="aggregatedKeyRate" class="form-label">Aggregated Key Rate (bps)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="aggregatedKeyRate"
+                                    name="aggregatedKeyRate">
+                            </div>
+                            <div class="mb-3" id="avgPhotonLoss" style="display: none;">
+                                <label for="avgPhotonLoss" class="form-label">Average Photon Loss</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="avgPhotonLoss"
+                                    name="avgPhotonLoss">
+                            </div>
+                            <div class="mb-3" id="consumptionRate" style="display: none;">
+                                <label for="consumptionRate" class="form-label">Consumption Rate (bps)</label>
+                                <input type="number" step="0.01" min="0" class="form-control" id="consumptionRate"
+                                    name="consumptionRate">
+                            </div>
+                            <div class="mb-3" id="keyPoolRemaining" style="display: none;">
+                                <label for="keyPoolRemaining" class="form-label">Key Pool Remaining</label>
+                                <input type="number" min="0" class="form-control" id="keyPoolRemaining"
+                                    name="keyPoolRemaining">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Create Node</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Link Modal -->
+        <div class="modal fade" id="createLinkModal" tabindex="-1" aria-labelledby="createLinkModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createLinkModalLabel">Create Link</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="createLinkForm" method="POST" action="/create-link">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="mb-3">
+                                <label for="sourceNode" class="form-label">Source Node</label>
+                                <input class="form-control" list="sourceOptions" id="sourceNode" name="sourceNode"
+                                    required>
+                                <datalist id="sourceOptions">
+                                    {% for node_id, node in node_map.items() %}
+                                    <option value="{{ node_id }}">{{ node_id }}</option>
+                                    {% endfor %}>
+                                </datalist>
+                            </div>
+                            <div class="mb-3">
+                                <label for="destinationNode" class="form-label">Destination Node</label>
+                                <input class="form-control" list="destinationOptions" id="destinationNode"
+                                    name="destinationNode" required>
+                                <datalist id="destinationOptions">
+                                    {% for node_id, node in node_map.items() %}
+                                    <option value="{{ node_id }}">{{ node_id }}</option>
+                                    {% endfor %}>
+                                </datalist>
+                            </div>
+                            <div class="mb-3">
+                                <label for="linkStatus" class="form-label">Status</label>
+                                <select class="form-select" id="linkStatus" name="linkStatus" required>
+                                    <option value="Up">Up</option>
+                                    <option value="Down">Down</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create Link</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+    <!--chatbot script-->
+
+    <script>
+        const userPermissions = JSON.parse('{{ permissions | tojson }}');
+    </script>
+
+
+    <!-- Network Topology Script -->
+    <script>
+        const cyElements = JSON.parse('{{ elements | tojson}}');
+        const deviceMaps = JSON.parse('{{ node_map | tojson }}');
+        var cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: cyElements,
+            style: [
+                {
+                    selector: 'node.Online',
+                    style: {
+                        'background-color': '#28a745'
+                    }
+                },
+                {
+                    selector: 'node.Offline',
+                    style: {
+                        'background-color': '#6c757d'
+                    }
+                },
+                {
+                    selector: 'node.Temporary',
+                    style: {
+                        'background-color': '#1E90FF '
+                    }
+                },
+                {
+                    selector: 'node.Critical',
+                    style: {
+                        'background-color': '#dc3545'
+                    }
+                },
+                {
+                    selector: 'edge.Up',
+                    style: {
+                        'width': 2,
+                        'line-color': '#28a745',
+                    }
+                },
+                {
+                    selector: 'edge.Down',
+                    style: {
+                        'width': 2,
+                        'line-color': '#6c757d',
+                    }
+                },
+                {
+                    selector: 'edge.Warning',
+                    style: {
+                        'width': 2,
+                        'line-color': '#e0a800',
+                    }
+                },
+                {
+                    selector: 'edge.Critical',
+                    style: {
+                        'width': 2,
+                        'line-color': '#dc3545',
+                    }
+                },
+                {
+                    selector: 'edge.Temporary',
+                    style: {
+                        'width': 2,
+                        'line-color': '#00BFFF',
+                    }
+                },
+                {
+                    selector: 'node.QKD',
+                    style: {
+                        'shape': 'ellipse',
+                        'label': 'data(id)',
+
+                    }
+                },
+                {
+                    selector: 'node.Router',
+                    style: {
+                        'shape': 'rectangle',
+                        'label': 'data(id)',
+
+                    }
+                },
+                {
+                    selector: 'node.Switch',
+                    style: {
+                        'shape': 'diamond',
+                        'label': 'data(id)',
+
+                    }
+                },
+                {
+                    selector: 'node.KMS',
+                    style: {
+                        'shape': 'hexagon',
+                        'label': 'data(id)',
+
+                    }
+                },
+                {
+                    selector: 'node.Consumer',
+                    style: {
+                        'shape': 'triangle',
+                        'label': 'data(id)',
+
+                    }
+                }
+            ],
+            layout: {
+                name: 'breadthfirst',
+                directed: true,
+                padding: 10
+            }
+        });
+
+        cy.on('tap', 'node', function (evt) {
+            let id = evt.target.id();
+            let listContainer = document.getElementById("deviceDetails");
+            let device = deviceMaps[id];
+            let actions = document.getElementById("deviceActions");
+            let html = '';
+            if (device.state === "Temporary" && userPermissions.includes("path.node.edit")) {
+                html += `
+                <form method="POST" action="/update-node" id="updateNodeForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="nodeId" value="${device.node_id}">
+                    <ul class="list-group">
+                        <li class="list-group-item"><strong>Node ID:</strong> ${device.node_id}</li>
+                        <li class="list-group-item">
+                            <strong>Status:</strong>
+                            <select name="nodeStatusChange" class="form-select">
+                                <option value="Online" ${device.status === "Online" ? "selected" : ""}>Online</option>
+                                <option value="Offline" ${device.status === "Offline" ? "selected" : ""}>Offline</option>
+                            </select>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Type:</strong>
+                            <select class="form-select" id="nodeTypeChange" name="nodeTypeChange" required>
+                                <option value="Router" ${device.type === "Router" ? "selected" : ""}>Router</option>
+                                <option value="QKD" ${device.type === "QKD" ? "selected" : ""}>QKD</option>
+                                <option value="Switch" ${device.type === "Switch" ? "selected" : ""}>Switch</option>
+                                <option value="KMS" ${device.type === "KMS" ? "selected" : ""}>KMS</option>
+                                <option value="Consumer" ${device.type === "Consumer" ? "selected" : ""}>Consumer</option>
+                            </select>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Site:</strong>
+                            <select class="form-select" name="nodeSiteChange" required>
+                                <option value="Site_A" ${device.site === "Site_A" ? "selected" : ""}>Site A</option>
+                                <option value="Site_B" ${device.site === "Site_B" ? "selected" : ""}>Site B</option>
+                                <option value="Site_C" ${device.site === "Site_C" ? "selected" : ""}>Site C</option>
+                            </select>
+                        </li>
+                        <li class="list-group-item qkd-fields" style="display: none;">
+                            <strong>Aggregated Key Rate:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="aggKeyRateChange" value="${device.aggregated_key_rate || ''}">
+                        </li>
+                        <li class="list-group-item qkd-fields" style="display: none;">
+                            <strong>Average Photon Loss:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="avgPhotonLossChange" value="${device.avg_photon_loss || ''}">
+                        </li>
+                        <li class="list-group-item qkd-fields" style="display: none;">
+                            <strong>Consumption Rate:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="consumptionRateChange" value="${device.consumption_rate || ''}">
+                        </li>
+                        <li class="list-group-item qkd-fields" style="display: none;">
+                            <strong>Key Pool Remaining:</strong>
+                            <input type="number" min="0" class="form-control" name="keyPoolRemainingChange" value="${device.key_pool_remaining || ''}">
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Last Updated:</strong> ${device.last_updated}
+                        </li>
+                    </ul>
+                </form>
+                <div class="modal-footer">
+                     <button type="submit" class="btn btn-primary" form="updateNodeForm">Save</button>
+                `;
+                if (userPermissions.includes("path.node.delete")) {
+                    html += `
+                    <form method="POST" action="/delete-node">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="nodeId" value="${device.node_id}">
+                        <div>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </div>
+                    </form>`;
+                }
+                html += `
+                </div>
+                `;
+                actions.style.display = "block";
+
+
+            } else if (userPermissions.includes("path.node.view")) {
+                html += `
+                <ul class="list-group">
+                    <li class="list-group-item"><strong>Node ID:</strong> ${device.node_id}</li>
+                    <li class="list-group-item"><strong>Status:</strong> ${device.status}</li>
+                    <li class="list-group-item"><strong>Type:</strong> ${device.type}</li>
+                    <li class="list-group-item"><strong>Site:</strong> ${device.site}</li>`;
+                if (device.type === "QKD") {
+                    html += `
+                        <li class="list-group-item"><strong>Key Pool Remaining:</strong> ${device.key_pool_remaining}</li>
+                        <li class="list-group-item"><strong>Aggregated Key Rate:</strong> ${device.aggregated_key_rate}</li>
+                        <li class="list-group-item"><strong>Average Photon Loss:</strong> ${device.avg_photon_loss}</li>
+                        <li class="list-group-item"><strong>Consumption Rate:</strong> ${device.consumption_rate}</li>`;
+                }
+                html += `<li class="list-group-item"><strong>Last Updated:</strong> ${device.last_updated}</li></ul>`;
+                actions.style.display = "none";
+            }
+
+            listContainer.innerHTML = html;
+
+            // When the node status changes, show/hide fields based on status
+            $('#nodeTypeChange').on('change', function () {
+                if ($(this).val() === 'QKD') {
+                    $('.qkd-fields').show();
+                } else {
+                    $('.qkd-fields').hide();
+                }
+            });
+
+            // Show Bootstrap modal using jQuery
+            $('#deviceModal').modal('show');
+        });
+
+        const linkMaps = JSON.parse('{{ link_map | tojson }}');
+
+        cy.on('tap', 'edge', function (evt) {
+
+            let id = evt.target.id();
+            let listContainer = document.getElementById("linkDetails");
+            let link = linkMaps[id];
+            let actions = document.getElementById("linkActions");
+            let html = '';
+
+            if (!link) return;
+            if (link.state === "Temporary" && userPermissions.includes("path.link.edit")) {
+                html += `
+                <form method="POST" action="/update-link" id="updateLinkForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="linkId" value="${link.link_id}">
+                    <ul class="list-group">
+                        <li class="list-group-item"><strong>Link ID:</strong> ${link.link_id}</li>
+                        <li class="list-group-item">
+                            <strong>Status:</strong>
+                            <select name="linkStatusChange" class="form-select">
+                                <option value="Up" ${link.status === "Up" ? "selected" : ""}>Up</option>
+                                <option value="Down" ${link.status === "Down" ? "selected" : ""}>Down</option>
+                            </select>
+                        </li>
+                        <li class="list-group-item"><strong>Link Type:</strong> ${link.link_type}</li>`;
+                if (link.link_type === "Quantum") {
+                    html += `
+                        <li class="list-group-item" style="display: none;">
+                            <strong>QBER:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="qberChange" value="${link.qber || ''}">
+                        </li>
+                        <li class="list-group-item" style="display: none;">
+                            <strong>Visibility:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="visibilityChange" value="${link.visibility || ''}">
+                        </li>
+                        <li class="list-group-item" style="display: none;">
+                            <strong>Key Rate:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="keyRateChange" value="${link.key_rate || ''}">
+                        </li>
+                        <li class="list-group-item" style="display: none;">
+                            <strong>Photon Loss:</strong>
+                            <input type="number" step="0.01" min="0" class="form-control" name="photonLossChange" value="${link.photon_loss || ''}">
+                        </li>`}
+                html += `
+                        <li class="list-group-item">
+                            <strong>Last Updated:</strong> ${link.last_updated}
+                        </li>
+                    </ul>
+                </form>
+                <div class="modal-footer">
+                     <button type="submit" class="btn btn-primary" form="updateLinkForm">Save</button>
+                `;
+                if (userPermissions.includes("path.link.delete")) {
+                    html += `
+                    <form method="POST" action="/delete-link">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="linkId" value="${link.link_id}">
+                        <div>
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </div>
+                    </form>`;
+                }
+                html += `
+                </div>
+                `;
+                actions.style.display = "block";
+
+
+            } else if (userPermissions.includes("path.link.view")) {
+                html += `
+                <ul class="list-group">
+                    <li class="list-group-item"><strong>Link ID:</strong> ${link.link_id}</li>
+                    <li class="list-group-item"><strong>Status:</strong> ${link.status}</li>
+                    <li class="list-group-item"><strong>Type:</strong> ${link.link_type}</li>`;
+                if (link.link_type === "Quantum") {
+                    html += `
+                        <li class="list-group-item"><strong>QBER:</strong> ${link.qber ?? 'N/A'}</li>
+                        <li class="list-group-item"><strong>Visibility:</strong> ${link.visibility ?? 'N/A'}</li>
+                        <li class="list-group-item"><strong>Key Rate:</strong> ${link.key_rate ?? 'N/A'}</li>
+                        <li class="list-group-item"><strong>Photon Loss:</strong> ${link.photon_loss ?? 'N/A'}</li>`;
+                }
+                html += `<li class="list-group-item"><strong>Last Updated:</strong> ${link.last_updated}</li></ul>`;
+                actions.style.display = "none";
+            }
+
+            listContainer.innerHTML = html;
+
+            $('#linkModal').modal('show');
+        });
+
+        // When node type changes, check if it's QKD
+        $('#nodeType').on('change', function () {
+            if ($(this).val() === 'QKD') {
+                $('#aggregatedKeyRateField').show();
+                $('#avgPhotonLoss').show();
+                $('#consumptionRate').show();
+                $('#keyPoolRemaining').show();
+            } else {
+                $('#aggregatedKeyRateField').hide();
+                $('#avgPhotonLoss').hide();
+                $('#consumptionRate').hide();
+                $('#keyPoolRemaining').hide();
+            }
+        });
+
+    </script>
+</body>
+
+</html>

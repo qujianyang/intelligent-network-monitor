@@ -1,0 +1,40 @@
+# Simple Dockerfile for QKD Flask GUI - KISS/YAGNI Principle
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for MySQL and compilation
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    default-libmysqlclient-dev \
+    pkg-config \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the clean requirements file and install all dependencies
+COPY requirements-clean.txt .
+RUN pip install --no-cache-dir -r requirements-clean.txt
+
+# Copy application code
+COPY GUI/ ./GUI/
+COPY Dashboard/ ./Dashboard/
+COPY config.py ./
+
+# Create necessary directories (data will be mounted as volume)
+RUN mkdir -p logs uploads cache Dashboard/models data
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:5000/ || exit 1
+
+# Expose port
+EXPOSE 5000
+
+# Run the application
+CMD ["python", "GUI/app.py", "--host", "0.0.0.0", "--port", "5000"]

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'alert.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('security_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'alert.view_unresolved' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alert_list') }}" role="button">Alert List</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_alerts' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alert_audit_log') }}" role="button">Alert Audit Log</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_faults' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alarm_audit_log') }}" role="button">Alarm Audit Log</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        
+        <h3>Security and Alerts Overview</h3>
+        <p class="text-muted">This page provides a comprehensive overview of the security status and performance metrics
+            of the Quantum Key Distribution (QKD) network.</p>
+        <div class="row row-cols-1 row-cols-md-6 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">QBER over Threshold</h6>
+                        <h2 class="card-title text-primary">{{ qber }} Link(s)</h2>
+                        <p class="card-text text-muted small">more than 8% QBER</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Visibility below Threshold</h6>
+                        <h2 class="card-title text-primary">{{ visibility }} Link(s)</h2>
+                        <p class="card-text text-muted small"> less than 90% Visibility </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Secret Key Rate below Threshold</h6>
+                        <h2 class="card-title text-primary">{{ secret_key_rate }} Link(s)</h2>
+                        <p class="card-text text-muted small"> less than 15kbps </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Key Pool below Threshold</h6>
+                        <h2 class="card-title text-primary">{{ key_pool_remaining }} Node(s)</h2>
+                        <p class="card-text text-muted small">less than 3000 Keys</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Photon Loss Above Threshold</h6>
+                        <h2 class="card-title text-primary">{{ photon_loss }} Link(s)</h2>
+                        <p class="card-text text-muted small">more than 20%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Active Alerts</h6>
+                        <h2 class="card-title text-primary">{{ number_of_alerts }}</h2>
+                        <p class="card-text text-muted small">Total Number of Active Alerts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <canvas id="severityPieChart" style="height:400px;"></canvas>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <canvas id="alertTypeChart" style="height:400px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Graphs-->
+    <script>
+
+        // Alerts by Severity (Pie)
+        const pieData = {
+            labels: ['Critical', 'Warning'],
+            datasets: [{
+                data: [JSON.parse('{{ number_of_critical_alerts | tojson  }}'), JSON.parse('{{ number_of_warning_alerts | tojson  }}')],
+                backgroundColor: ['#e74a3b', '#f6c23e']  // red for critical, yellow for warning
+            }]
+        };
+
+        new Chart(document.getElementById('severityPieChart'), {
+            type: 'pie',
+            data: pieData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Alert Severity Breakdown'
+                    }
+                }
+            }
+        });
+
+
+        // Alerts by Type (Line)
+        const alertTypeCtx = document.getElementById('alertTypeChart').getContext('2d');
+
+        new Chart(alertTypeCtx, {
+            type: 'line',
+            data: {
+                labels: JSON.parse('{{ dates | tojson }}'),
+                datasets: [
+                    {
+                        label: 'QBER Spike',
+                        data: JSON.parse('{{ high_qber_data | tojson }}'),
+                        backgroundColor: 'gold',
+                        borderColor: 'gold',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Low Key Pool',
+                        data: JSON.parse('{{ low_key_pool_data | tojson }}'),
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Low Visibility',
+                        data: JSON.parse('{{ low_visibility_data | tojson }}'),
+                        backgroundColor: 'purple',
+                        borderColor: 'purple',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'High Photon Loss',
+                        data: JSON.parse('{{ high_photon_loss_data | tojson }}'),
+                        backgroundColor: 'blue',
+                        borderColor: 'blue',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Total Alerts',
+                        data: JSON.parse('{{ total_alerts_data | tojson }}'),
+                        borderColor: 'pink',
+                        backgroundColor: 'pink',
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // This allows canvas height to be used fully
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Alert Type Over Time'
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Alerts'
+                        },
+                        ticks: {
+                            stepSize: 1,   // Ensure the ticks are whole numbers
+                            callback: function (value, index, values) {
+                                return Number(value).toFixed(0);  // Ensure whole numbers only
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+
+    </script>
+</body>
+
+</html>

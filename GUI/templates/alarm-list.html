@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Fault Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab">
+            {% if 'fault.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('fault_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'fault.view_details' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('alarm_list') }}" role="button">Alarm List</a>
+            </li>
+            {% endif %}
+        </ul>
+        <h3>Alarm List</h3>
+        <p>Below is the list of current alarms. Click on an alarm to view detailed information.</p>
+        <div class="row g-3 mb-3 align-items-center">
+            <!-- Status Filters -->
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Status:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Open" id="statusOpen" checked>
+                    <label class="form-check-label" for="statusOpen">Open</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Ongoing" id="statusOngoing"
+                        checked>
+                    <label class="form-check-label" for="statusOngoing">Ongoing</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Resolved" id="statusResolved"
+                        checked>
+                    <label class="form-check-label" for="statusResolved">Resolved</label>
+                </div>
+            </div>
+
+            <!-- Severity Filters -->
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Severity:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input severity-filter" type="checkbox" value="Critical"
+                        id="severityCritical" checked>
+                    <label class="form-check-label" for="severityCritical">Critical</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input severity-filter" type="checkbox" value="Warning" id="severityWarning"
+                        checked>
+                    <label class="form-check-label" for="severityWarning">Warning</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input severity-filter" type="checkbox" value="Info" id="severityInfo"
+                        checked>
+                    <label class="form-check-label" for="severityInfo">Info</label>
+                </div>
+            </div>
+
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <div>
+                    <label for="timeWindowFilter" class="form-label fw-bold">Filter By Time:</label>
+                    <select id="timeWindowFilter" class="form-select">
+                        <option value="all">All</option>
+                        <option value="1h">Last 1 Hour</option>
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+
+                <!-- Custom range picker (side-by-side, hidden initially) -->
+                <div class="d-flex align-items-end gap-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" placeholder="Start" />
+                    <input type="datetime-local" id="endTime" class="form-control" placeholder="End" />
+                </div>
+            </div>
+
+
+            <!-- Export Buttons -->
+            <div class="col-md-2 text-end">
+                <label class="form-label fw-bold">Export Data:</label><br>
+                <button class="btn btn-outline-success me-2" onclick="exportToExcel()" title="Export to Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+            </div>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        <table class="table table-bordered table-responsive" id="alarmTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Fault ID</th>
+                    <th scope="col">Time Detected</th>
+                    <th scope="col">Device</th>
+                    <th scope="col">Severity</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody id="currentAlarmTable">
+                {% for fault in faults %}
+                <tr data-bs-toggle="offcanvas" data-bs-target="#alarmDetails" aria-controls="alarmDetails"
+                    data-fault-id="{{ fault['fault_id'] }}" data-detected-at="{{ fault['detected_at'] }}"
+                    data-component="{{ fault['component'] }}" data-severity="{{ fault['severity'] }}"
+                    data-description="{{ fault['description'] }}" data-status="{{ fault['status'] }}"
+                    data-clearing-condition="{{ fault['clearing_condition'] }}"
+                    data-raising-condition="{{ fault['raising_condition'] }}"
+                    data-acknowledged-by="{{ fault['acknowledged_by'] }}" data-resolved-by="{{ fault['resolved_by'] }}"
+                    data-assigned-to="{{ fault['assigned_to'] }}" data-remediation="{{ fault['remediation'] }}"
+                    data-acknowledgement-notes="{{ fault['acknowledgement_notes'] }}"
+                    data-acknowledged-at="{{ fault['acknowledged_at'] }}" data-resolved-at="{{ fault['resolved_at'] }}">
+                    <td>{{fault['fault_id']}}</td>
+                    <td>{{fault['detected_at']}}</td>
+                    <td>{{fault['component']}}</td>
+                    <td>{{fault['severity']}}</td>
+                    <td>{{fault['description']}}</td>
+                    <td>
+                        {% if fault['status'] == 'Open' %}
+                        {% if 'fault.acknowledge' in permissions %}
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-fault-id="{{ fault['fault_id'] }}" data-bs-target="#acknowledgeModal">
+                            Acknowledge
+                        </button>
+                        {% else %}
+                        Open
+                        {% endif %}
+                        {% elif fault['status'] == 'Ongoing' %}
+                        {% if 'fault.resolve' in permissions and fault['assigned_to_uuid'] == g.user_id %}
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            data-fault-id="{{ fault['fault_id'] }}" data-bs-target="#resolveModal">
+                            Resolve
+                        </button>
+                        {% else %}
+                        Ongoing
+                        {% endif %}
+                        {% else %}
+                        Resolved
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="alarmDetails" aria-labelledby="alarmDetailsLabel">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="alarmDetailsLabel">Alarm Details</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="offcanvas-body">
+                <div class="accordion" id="alarmDetailsAccordion">
+
+                    <!-- General -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="generalHeading">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#generalCollapse" aria-expanded="true" aria-controls="generalCollapse">
+                                General
+                            </button>
+                        </h2>
+                        <div id="generalCollapse" class="accordion-collapse collapse show"
+                            aria-labelledby="generalHeading">
+                            <div class="accordion-body">
+                                <p><strong>Fault ID:</strong> <span id="alarm-id"></span></p>
+                                <p><strong>Detected:</strong> <span id="alarm-time"></span>
+                                </p>
+                                <p><strong>Status:</strong> <span id="alarm-status"></span></p>
+                                <p><strong>Network Layer:</strong> <span id="alarm-layer"></span></p>
+                                <p><strong>Severity:</strong> <span id="alarm-severity"></span></p>
+                                <p><strong>Component Affected:</strong> <span id="alarm-component"></span></p>
+                                <!-- <p><strong>Affected Sessions:</strong> <span id="alarm-sessions"></span></p> -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acknowledgement -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="ackHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#ackCollapse" aria-expanded="false" aria-controls="ackCollapse">
+                                Acknowledgement
+                            </button>
+                        </h2>
+                        <div id="ackCollapse" class="accordion-collapse collapse" aria-labelledby="ackHeading">
+                            <div class="accordion-body">
+                                <p><strong>Acknowledged By:</strong> <span id="alarm-acknowledged-by"></span></p>
+                                <p><strong>Acknowledged At:</strong> <span id="alarm-acknowledged-at"></span></p>
+                                <p><strong>Assigned To:</strong> <span id="alarm-assigned-to"></span></p>
+                                <p><strong>Resolved By:</strong> <span id="alarm-resolved-by"></span></p>
+                                <p><strong>Resolved At:</strong> <span id="alarm-resolved-at"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acknowledgement Notes -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="ackNotesHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#ackNotesCollapse" aria-expanded="false"
+                                aria-controls="ackNotesCollapse">
+                                Acknowledgement Notes
+                            </button>
+                        </h2>
+                        <div id="ackNotesCollapse" class="accordion-collapse collapse"
+                            aria-labelledby="ackNotesHeading">
+                            <div class="accordion-body">
+                                <p><strong>Remarks: </strong><span id="alarm-acknowledgement-notes"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="descHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#descCollapse" aria-expanded="false" aria-controls="descCollapse">
+                                Description
+                            </button>
+                        </h2>
+                        <div id="descCollapse" class="accordion-collapse collapse" aria-labelledby="descHeading">
+                            <div class="accordion-body">
+                                <p><span id="alarm-description"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--Remedial Action -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="remedialHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#remedialCollapse" aria-expanded="false"
+                                aria-controls="remedialCollapse">
+                                Remedial Action
+                            </button>
+                        </h2>
+                        <div id="remedialCollapse" class="accordion-collapse collapse"
+                            aria-labelledby="remedialHeading">
+                            <div class="accordion-body">
+                                <p><strong>Remediation: </strong><span id="alarm-remediation"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Raising Condition -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="raisingHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#raisingCollapse" aria-expanded="false" aria-controls="raisingCollapse">
+                                Raising Condition
+                            </button>
+                        </h2>
+                        <div id="raisingCollapse" class="accordion-collapse collapse" aria-labelledby="raisingHeading">
+                            <div class="accordion-body">
+                                <p><span id="alarm-raising-condition"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clearing Condition -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="clearingHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#clearingCollapse" aria-expanded="false"
+                                aria-controls="clearingCollapse">
+                                Clearing Condition
+                            </button>
+                        </h2>
+                        <div id="clearingCollapse" class="accordion-collapse collapse"
+                            aria-labelledby="clearingHeading">
+                            <div class="accordion-body">
+                                <p><span id="alarm-clearing-condition"></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- /accordion -->
+            </div> <!-- /offcanvas-body -->
+        </div>
+
+        <!-- Acknowledge Modal -->
+        <div class="modal fade" id="acknowledgeModal" tabindex="-1" aria-labelledby="acknowledgeModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="acknowledgeModalLabel">Acknowledge Fault</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('acknowledge_alarm') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <input type="hidden" name="faultId" id="modal-fault-id">
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Assigned To</label>
+                                <select class="form-select" id="assignedTo" name="assignedTo" required>
+                                    {% for user in users %}
+                                    <option value="{{ user['uuid'] }}">{{ user['name'] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Acknowledgement Notes:</strong>
+                                <input class="form-control" name="acknowledgementNotes" type="text">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" value="yes" id="ackCheckbox"
+                                    name="acknowledged">
+                                <label class="form-check-label" for="ackCheckbox">
+                                    I acknowledge this fault.
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Acknowledge</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Resolve Modal -->
+        <div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="resolveModalLabel">Resolve Fault</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('resolve_alarm') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <input type="hidden" name="faultId" id="resolve-modal-fault-id">
+                            <div class="mb-3">
+                                <strong>Remediation:</strong>
+                                <input class="form-control" name="remediation" type="text">
+                            </div>
+                            <div class="mb-3">
+                                <strong>Clearing Condition:</strong>
+                                <input class="form-control" name="clearingCondition" type="text">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" value="yes" id="ackCheckbox"
+                                    name="acknowledged">
+                                <label class="form-check-label" for="ackCheckbox">
+                                    I resolve this fault.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Resolve</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const acknowledgeButtons = document.querySelectorAll('button[data-bs-target="#acknowledgeModal"]');
+            acknowledgeButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const faultId = button.getAttribute('data-fault-id');
+                    document.getElementById('modal-fault-id').value = faultId;
+                });
+            });
+
+            const resolveButtons = document.querySelectorAll('button[data-bs-target="#resolveModal"]');
+            resolveButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const faultId = button.getAttribute('data-fault-id');
+                    document.getElementById('resolve-modal-fault-id').value = faultId;
+                });
+            });
+
+            // Attach click listener to each table row
+            document.querySelectorAll('#currentAlarmTable tr').forEach(row => {
+                row.addEventListener('click', function () {
+                    // Get data attributes
+                    const faultId = this.getAttribute('data-fault-id');
+                    const detectedAt = this.getAttribute('data-detected-at');
+                    const status = this.getAttribute('data-status');
+                    const component = this.getAttribute('data-component');
+                    const severity = this.getAttribute('data-severity');
+                    const description = this.getAttribute('data-description');
+                    const clearingCondition = this.getAttribute('data-clearing-condition');
+                    const raisingCondition = this.getAttribute('data-raising-condition');
+                    const acknowledgedBy = this.getAttribute('data-acknowledged-by');
+                    const resolvedBy = this.getAttribute('data-resolved-by');
+                    const assignedTo = this.getAttribute('data-assigned-to');
+                    const acknowledgement_notes = this.getAttribute('data-acknowledgement-notes');
+                    const remediation = this.getAttribute('data-remediation');
+                    const acknowledged_at = this.getAttribute('data-acknowledged-at');
+                    const resolved_at = this.getAttribute('data-resolved-at');
+
+                    // Populate the offcanvas spans
+                    document.getElementById('alarm-id').innerText = faultId;
+                    document.getElementById('alarm-time').innerText = detectedAt;
+                    document.getElementById('alarm-status').innerText = status;
+                    document.getElementById('alarm-component').innerText = component;
+                    document.getElementById('alarm-layer').innerText = (component.includes('QKD') ? 'Quantum' : 'Classical');
+
+                    document.getElementById('alarm-severity').innerText = severity;
+                    document.getElementById('alarm-description').innerText = description;
+                    document.getElementById('alarm-clearing-condition').innerText = clearingCondition || 'N/A';
+                    document.getElementById('alarm-raising-condition').innerText = raisingCondition || 'N/A';
+
+                    document.getElementById('alarm-acknowledged-by').innerText = acknowledgedBy;
+                    document.getElementById('alarm-resolved-by').innerText = resolvedBy;
+                    document.getElementById('alarm-assigned-to').innerText = assignedTo;
+                    document.getElementById('alarm-acknowledged-at').innerText = acknowledged_at || 'N/A';
+                    document.getElementById('alarm-resolved-at').innerText = resolved_at || 'N/A';
+
+                    document.getElementById('alarm-acknowledgement-notes').innerText = acknowledgement_notes || 'N/A';
+                    document.getElementById('alarm-remediation').innerText = remediation || 'N/A';
+
+                    // You can also trigger backend fetch for affected sessions if you want
+                });
+            });
+        });
+
+        $(document).ready(function () {
+            $('#alarmTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[2, "desc"]] // Default sort by "Time Detected" column
+            });
+        });
+
+        function filterTable() {
+            const statusFilters = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+            const severityFilters = Array.from(document.querySelectorAll('.severity-filter:checked')).map(cb => cb.value);
+            const timeWindow = document.getElementById('timeWindowFilter').value;
+
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (timeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (timeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (timeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (timeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return; // Skip filter if dates are missing
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentAlarmTable tr');
+            rows.forEach(row => {
+                const status = row.cells[5].textContent.trim();
+                const severity = row.cells[3].textContent.trim();
+                const timeText = row.cells[2].textContent.trim(); // "Time Detected"
+                const detectedTime = new Date(timeText);
+
+                const matchesStatus = statusFilters.includes(status);
+                const matchesSeverity = severityFilters.includes(severity);
+                const matchesTime = (timeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+
+                row.style.display = (matchesStatus && matchesSeverity && matchesTime) ? '' : 'none';
+            });
+        }
+
+        // Attach event listeners
+        document.querySelectorAll('.status-filter, .severity-filter').forEach(cb => {
+            cb.addEventListener('change', filterTable);
+        });
+        document.getElementById('timeWindowFilter').addEventListener('change', function () {
+            const customRange = document.getElementById('customRangeInputs');
+            customRange.classList.toggle('d-none', this.value !== 'custom');
+            filterTable();
+        });
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const table = document.getElementById("alarmTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Alarms" });
+            XLSX.writeFile(wb, "alarms.xlsx");
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({ html: '#alarmTable' });
+            doc.save('alarms.pdf');
+        }
+    </script>
+
+
+</body>
+
+</html>

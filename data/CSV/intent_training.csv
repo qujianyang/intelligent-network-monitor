@@ -1,0 +1,525 @@
+text,label
+Signal loss detected at node A,fault_diagnosis
+Alarm triggered at node C due to fault,fault_diagnosis
+Alarm triggered at node F due to fault,fault_diagnosis
+Bit error rates are abnormal on E,fault_diagnosis
+Signal loss detected at node D,fault_diagnosis
+Unusual key rate drop on node E,fault_diagnosis
+Link between B and D is unreliable,fault_diagnosis
+Quantum channel degradation reported at node B,fault_diagnosis
+Bit error rates are abnormal on A,fault_diagnosis
+Link between D and A is unreliable,fault_diagnosis
+Unusual key rate drop on node D,fault_diagnosis
+QBER on node C is too high,fault_diagnosis
+High noise detected on channel D,fault_diagnosis
+Link between F and E is unreliable,fault_diagnosis
+Quantum channel degradation reported at node E,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Link between D and B is unreliable,fault_diagnosis
+Alarm triggered at node E due to fault,fault_diagnosis
+QBER on node C is too high,fault_diagnosis
+Unusual key rate drop on node F,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Node F shows unstable photon counts,fault_diagnosis
+Signal loss detected at node D,fault_diagnosis
+High noise detected on channel C,fault_diagnosis
+Signal loss detected at node E,fault_diagnosis
+Bit error rates are abnormal on E,fault_diagnosis
+Signal loss detected at node D,fault_diagnosis
+Node B shows unstable photon counts,fault_diagnosis
+Alarm triggered at node A due to fault,fault_diagnosis
+Node A shows unstable photon counts,fault_diagnosis
+Signal loss detected at node F,fault_diagnosis
+Quantum channel degradation reported at node B,fault_diagnosis
+Link between B and A is unreliable,fault_diagnosis
+High noise detected on channel B,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Quantum channel degradation reported at node E,fault_diagnosis
+Bit error rates are abnormal on A,fault_diagnosis
+Unusual key rate drop on node D,fault_diagnosis
+Signal loss detected at node A,fault_diagnosis
+Link between E and A is unreliable,fault_diagnosis
+Link between D and A is unreliable,fault_diagnosis
+Quantum channel degradation reported at node D,fault_diagnosis
+Bit error rates are abnormal on D,fault_diagnosis
+Bit error rates are abnormal on D,fault_diagnosis
+Entanglement errors noticed on node C,fault_diagnosis
+Unusual key rate drop on node C,fault_diagnosis
+High noise detected on channel E,fault_diagnosis
+Bit error rates are abnormal on A,fault_diagnosis
+Quantum channel degradation reported at node E,fault_diagnosis
+Alarm triggered at node D due to fault,fault_diagnosis
+QBER on node F is too high,fault_diagnosis
+Unusual key rate drop on node E,fault_diagnosis
+Quantum channel degradation reported at node A,fault_diagnosis
+Unusual key rate drop on node E,fault_diagnosis
+Signal loss detected at node D,fault_diagnosis
+Link between F and B is unreliable,fault_diagnosis
+Unusual key rate drop on node C,fault_diagnosis
+Signal loss detected at node A,fault_diagnosis
+Entanglement errors noticed on node E,fault_diagnosis
+QBER on node A is too high,fault_diagnosis
+Signal loss detected at node E,fault_diagnosis
+Alarm triggered at node A due to fault,fault_diagnosis
+Entanglement errors noticed on node F,fault_diagnosis
+Signal loss detected at node F,fault_diagnosis
+QBER on node A is too high,fault_diagnosis
+Link between B and A is unreliable,fault_diagnosis
+Node F shows unstable photon counts,fault_diagnosis
+Alarm triggered at node A due to fault,fault_diagnosis
+Node C shows unstable photon counts,fault_diagnosis
+Signal loss detected at node C,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Signal loss detected at node F,fault_diagnosis
+Bit error rates are abnormal on C,fault_diagnosis
+High noise detected on channel D,fault_diagnosis
+Alarm triggered at node C due to fault,fault_diagnosis
+Bit error rates are abnormal on C,fault_diagnosis
+Alarm triggered at node D due to fault,fault_diagnosis
+Alarm triggered at node C due to fault,fault_diagnosis
+Quantum channel degradation reported at node A,fault_diagnosis
+Node C shows unstable photon counts,fault_diagnosis
+QBER on node F is too high,fault_diagnosis
+Node D shows unstable photon counts,fault_diagnosis
+Bit error rates are abnormal on D,fault_diagnosis
+Unusual key rate drop on node E,fault_diagnosis
+Alarm triggered at node A due to fault,fault_diagnosis
+Link between F and E is unreliable,fault_diagnosis
+Quantum channel degradation reported at node C,fault_diagnosis
+Link between C and D is unreliable,fault_diagnosis
+Signal loss detected at node F,fault_diagnosis
+Link between E and F is unreliable,fault_diagnosis
+Entanglement errors noticed on node D,fault_diagnosis
+Alarm triggered at node E due to fault,fault_diagnosis
+Node A shows unstable photon counts,fault_diagnosis
+Node D shows unstable photon counts,fault_diagnosis
+QBER on node A is too high,fault_diagnosis
+Link between B and C is unreliable,fault_diagnosis
+Link between A and B is unreliable,fault_diagnosis
+Link between F and C is unreliable,fault_diagnosis
+Alarm triggered at node C due to fault,fault_diagnosis
+Is node B online?,node_status
+Is node B online?,node_status
+What is the status of node A?,node_status
+Last communication received from node E?,node_status
+Check current metrics on node C,node_status
+Is node A online?,node_status
+Check current metrics on node D,node_status
+Health check on node E,node_status
+Health check on node D,node_status
+Battery level of node E?,node_status
+Is node E online?,node_status
+Battery level of node A?,node_status
+Is node B online?,node_status
+System logs from node A,node_status
+CPU and memory stats for node C,node_status
+CPU and memory stats for node B,node_status
+System logs from node F,node_status
+CPU and memory stats for node C,node_status
+Battery level of node F?,node_status
+Health check on node E,node_status
+System logs from node C,node_status
+Is node B online?,node_status
+What is the status of node D?,node_status
+Is node E online?,node_status
+Uptime report for node C,node_status
+Is there any alert on node C?,node_status
+Last communication received from node B?,node_status
+Last communication received from node C?,node_status
+System logs from node F,node_status
+What is the status of node F?,node_status
+Battery level of node D?,node_status
+What is the status of node A?,node_status
+Battery level of node F?,node_status
+CPU and memory stats for node E,node_status
+Battery level of node D?,node_status
+Health check on node B,node_status
+What is the status of node F?,node_status
+Check current metrics on node D,node_status
+What is the status of node F?,node_status
+CPU and memory stats for node D,node_status
+Uptime report for node A,node_status
+Uptime report for node F,node_status
+Battery level of node B?,node_status
+Is node F online?,node_status
+Last communication received from node A?,node_status
+Is there any alert on node C?,node_status
+CPU and memory stats for node F,node_status
+Uptime report for node C,node_status
+Check current metrics on node C,node_status
+What is the status of node D?,node_status
+Health check on node E,node_status
+Uptime report for node B,node_status
+Health check on node D,node_status
+Uptime report for node B,node_status
+System logs from node B,node_status
+What is the status of node D?,node_status
+Uptime report for node A,node_status
+Uptime report for node D,node_status
+Health check on node F,node_status
+Last communication received from node C?,node_status
+What is the status of node B?,node_status
+Battery level of node A?,node_status
+Is there any alert on node A?,node_status
+Battery level of node A?,node_status
+System logs from node C,node_status
+System logs from node B,node_status
+CPU and memory stats for node B,node_status
+Last communication received from node F?,node_status
+Battery level of node D?,node_status
+What is the status of node F?,node_status
+Check current metrics on node F,node_status
+System logs from node A,node_status
+CPU and memory stats for node B,node_status
+System logs from node D,node_status
+Battery level of node D?,node_status
+What is the status of node E?,node_status
+CPU and memory stats for node A,node_status
+Battery level of node F?,node_status
+CPU and memory stats for node F,node_status
+Is node D online?,node_status
+Battery level of node D?,node_status
+Check current metrics on node C,node_status
+CPU and memory stats for node E,node_status
+Battery level of node C?,node_status
+What is the status of node B?,node_status
+System logs from node A,node_status
+What is the status of node B?,node_status
+Is node E online?,node_status
+Battery level of node E?,node_status
+Is there any alert on node E?,node_status
+Health check on node B,node_status
+Health check on node C,node_status
+What is the status of node B?,node_status
+Check current metrics on node D,node_status
+System logs from node B,node_status
+Uptime report for node D,node_status
+Battery level of node A?,node_status
+Battery level of node D?,node_status
+Last communication received from node D?,node_status
+Last communication received from node D?,node_status
+Minimize hops between B and C,key_routing
+Minimize hops between D and F,key_routing
+Latency optimized key path E to B,key_routing
+Routing metrics for path D to A,key_routing
+Minimize hops between B and D,key_routing
+Evaluate throughput for C to A route,key_routing
+Secure path from C to D with low latency,key_routing
+Minimize hops between A and C,key_routing
+Optimize key distribution from B to E,key_routing
+Optimize key distribution from B to C,key_routing
+Key relay path from A to F,key_routing
+Minimize hops between E and F,key_routing
+Best route between B and E?,key_routing
+Suggested nodes to reach E from B,key_routing
+Secure path from D to B with low latency,key_routing
+Routing metrics for path B to E,key_routing
+Key relay path from F to A,key_routing
+Latency optimized key path E to D,key_routing
+Suggested nodes to reach F from A,key_routing
+Secure path from F to B with low latency,key_routing
+Find resilient route from D to A,key_routing
+Evaluate throughput for E to D route,key_routing
+Evaluate throughput for D to B route,key_routing
+Latency optimized key path D to A,key_routing
+Routing metrics for path F to E,key_routing
+Optimize key distribution from D to B,key_routing
+Key relay path from A to B,key_routing
+Routing metrics for path C to B,key_routing
+Latency optimized key path B to F,key_routing
+Routing metrics for path E to B,key_routing
+Evaluate throughput for F to B route,key_routing
+Secure path from E to C with low latency,key_routing
+Key relay path from F to D,key_routing
+Suggested nodes to reach B from A,key_routing
+Find resilient route from A to E,key_routing
+Key relay path from E to C,key_routing
+Routing metrics for path C to E,key_routing
+Latency optimized key path B to C,key_routing
+Suggested nodes to reach C from B,key_routing
+Minimize hops between F and E,key_routing
+Optimize key distribution from E to C,key_routing
+Secure path from B to F with low latency,key_routing
+Optimize key distribution from A to B,key_routing
+Optimize key distribution from C to B,key_routing
+Minimize hops between A and B,key_routing
+Best route between E and D?,key_routing
+Best route between A and F?,key_routing
+Minimize hops between C and D,key_routing
+Key relay path from B to E,key_routing
+Secure path from D to A with low latency,key_routing
+Find resilient route from A to B,key_routing
+Optimize key distribution from F to E,key_routing
+Latency optimized key path F to A,key_routing
+Minimize hops between E and A,key_routing
+Best route between C and B?,key_routing
+Key relay path from F to A,key_routing
+Routing metrics for path F to E,key_routing
+Key relay path from A to F,key_routing
+Minimize hops between A and F,key_routing
+Suggested nodes to reach F from B,key_routing
+Key relay path from D to C,key_routing
+Secure path from E to B with low latency,key_routing
+Minimize hops between E and D,key_routing
+Minimize hops between C and B,key_routing
+Latency optimized key path A to B,key_routing
+Minimize hops between B and D,key_routing
+Minimize hops between E and A,key_routing
+Suggested nodes to reach C from A,key_routing
+Find resilient route from A to B,key_routing
+Key relay path from E to A,key_routing
+Evaluate throughput for E to C route,key_routing
+Routing metrics for path E to B,key_routing
+Evaluate throughput for A to B route,key_routing
+Find resilient route from E to F,key_routing
+Minimize hops between B and E,key_routing
+Key relay path from A to B,key_routing
+Minimize hops between E and B,key_routing
+Optimize key distribution from F to A,key_routing
+Key relay path from A to F,key_routing
+Secure path from A to F with low latency,key_routing
+Best route between B and A?,key_routing
+Suggested nodes to reach D from E,key_routing
+Evaluate throughput for E to F route,key_routing
+Secure path from C to B with low latency,key_routing
+Best route between F and E?,key_routing
+Optimize key distribution from B to F,key_routing
+Latency optimized key path B to A,key_routing
+Optimize key distribution from D to A,key_routing
+Key relay path from B to E,key_routing
+Routing metrics for path E to C,key_routing
+Find resilient route from C to F,key_routing
+Find resilient route from A to D,key_routing
+Key relay path from D to B,key_routing
+Minimize hops between C and D,key_routing
+Routing metrics for path A to E,key_routing
+Find resilient route from E to D,key_routing
+Best route between C and D?,key_routing
+Secure path from F to B with low latency,key_routing
+Find resilient route from E to A,key_routing
+Evaluate throughput for A to D route,key_routing
+Operational manual for quantum link,general_sop
+SOP for node reset,general_sop
+How to inspect connectors on node F,general_sop
+Steps for environmental monitoring check,general_sop
+How to inspect connectors on node E,general_sop
+SOP for node reset,general_sop
+Guide to replacing fiber cable,general_sop
+How to inspect connectors on node E,general_sop
+SOP for emergency shutdown,general_sop
+Documentation on calibration routine,general_sop
+Guide to replacing fiber cable,general_sop
+Guide to replacing fiber cable,general_sop
+How to inspect connectors on node B,general_sop
+Operational manual for quantum link,general_sop
+Steps for environmental monitoring check,general_sop
+Shutdown procedure for node E,general_sop
+Guide to replacing fiber cable,general_sop
+Maintenance checklist,general_sop
+How to inspect connectors on node A,general_sop
+Operational manual for quantum link,general_sop
+Operational manual for quantum link,general_sop
+Steps for environmental monitoring check,general_sop
+Shutdown procedure for node A,general_sop
+SOP for node reset,general_sop
+Maintenance checklist,general_sop
+Maintenance checklist,general_sop
+SOP for node reset,general_sop
+Guide to replacing fiber cable,general_sop
+Standard startup sequence for node C,general_sop
+Guide to replacing fiber cable,general_sop
+SOP for node reset,general_sop
+SOP for emergency shutdown,general_sop
+SOP for node reset,general_sop
+Operational manual for quantum link,general_sop
+Standard startup sequence for node B,general_sop
+SOP for emergency shutdown,general_sop
+Guide to replacing fiber cable,general_sop
+Operational manual for quantum link,general_sop
+Operational manual for quantum link,general_sop
+Guide to replacing fiber cable,general_sop
+Steps for environmental monitoring check,general_sop
+Standard startup sequence for node E,general_sop
+Documentation on calibration routine,general_sop
+SOP for node reset,general_sop
+Documentation on calibration routine,general_sop
+Documentation on calibration routine,general_sop
+How to inspect connectors on node C,general_sop
+Documentation on calibration routine,general_sop
+Documentation on calibration routine,general_sop
+Guide to replacing fiber cable,general_sop
+Operational manual for quantum link,general_sop
+Operational manual for quantum link,general_sop
+SOP for emergency shutdown,general_sop
+SOP for node reset,general_sop
+Shutdown procedure for node C,general_sop
+Documentation on calibration routine,general_sop
+Shutdown procedure for node B,general_sop
+Guide to replacing fiber cable,general_sop
+Steps for environmental monitoring check,general_sop
+Standard startup sequence for node C,general_sop
+How to inspect connectors on node A,general_sop
+Steps for environmental monitoring check,general_sop
+Steps for environmental monitoring check,general_sop
+SOP for node reset,general_sop
+Steps for environmental monitoring check,general_sop
+Guide to replacing fiber cable,general_sop
+How to inspect connectors on node F,general_sop
+SOP for emergency shutdown,general_sop
+Guide to replacing fiber cable,general_sop
+Maintenance checklist,general_sop
+Maintenance checklist,general_sop
+Maintenance checklist,general_sop
+How to inspect connectors on node D,general_sop
+SOP for node reset,general_sop
+Shutdown procedure for node F,general_sop
+SOP for emergency shutdown,general_sop
+SOP for node reset,general_sop
+Standard startup sequence for node E,general_sop
+How to inspect connectors on node C,general_sop
+SOP for node reset,general_sop
+Maintenance checklist,general_sop
+Operational manual for quantum link,general_sop
+How to inspect connectors on node C,general_sop
+SOP for node reset,general_sop
+How to inspect connectors on node C,general_sop
+Maintenance checklist,general_sop
+Documentation on calibration routine,general_sop
+Maintenance checklist,general_sop
+Guide to replacing fiber cable,general_sop
+Maintenance checklist,general_sop
+Standard startup sequence for node A,general_sop
+SOP for node reset,general_sop
+SOP for emergency shutdown,general_sop
+SOP for emergency shutdown,general_sop
+Shutdown procedure for node D,general_sop
+SOP for node reset,general_sop
+SOP for emergency shutdown,general_sop
+SOP for emergency shutdown,general_sop
+Operational manual for quantum link,general_sop
+Shutdown procedure for node E,general_sop
+Check fault on node A,fault_diagnosis
+Check fault on node B,fault_diagnosis
+Check fault on node C,fault_diagnosis
+Check fault on node D,fault_diagnosis
+Check fault on node E,fault_diagnosis
+Check fault on node F,fault_diagnosis
+Check fault status on node A,fault_diagnosis
+Check fault status on node B,fault_diagnosis
+Check fault status on node C,fault_diagnosis
+Check for faults on node A,fault_diagnosis
+Check for faults on node B,fault_diagnosis
+Check for faults on node C,fault_diagnosis
+Check QKD fault detection for NodeA,fault_diagnosis
+Check QKD fault detection for NodeB,fault_diagnosis
+Check QKD fault detection for NodeC,fault_diagnosis
+Diagnose fault on node A,fault_diagnosis
+Diagnose fault on node B,fault_diagnosis
+Diagnose fault on node C,fault_diagnosis
+Check anomalies on node A,fault_diagnosis
+Check anomalies on node B,fault_diagnosis
+Check anomalies on node C,fault_diagnosis
+Check error status on node A,fault_diagnosis
+Check error status on node B,fault_diagnosis
+Check error status on node C,fault_diagnosis
+Check if node A has any faults,fault_diagnosis
+Check if node B has any faults,fault_diagnosis
+Check if node C has any faults,fault_diagnosis
+Check quantum channel faults on node A,fault_diagnosis
+Check quantum channel faults on node B,fault_diagnosis
+Check quantum channel faults on node C,fault_diagnosis
+Verify fault conditions on node A,fault_diagnosis
+Verify fault conditions on node B,fault_diagnosis
+Verify fault conditions on node C,fault_diagnosis
+Investigate faults on node A,fault_diagnosis
+Investigate faults on node B,fault_diagnosis
+Investigate faults on node C,fault_diagnosis
+Check system errors on node A,fault_diagnosis
+Check system errors on node B,fault_diagnosis
+Check system errors on node C,fault_diagnosis
+Run fault diagnostics on node A,fault_diagnosis
+Run fault diagnostics on node B,fault_diagnosis
+Run fault diagnostics on node C,fault_diagnosis
+Check node A for operational issues,fault_diagnosis
+Check node B for operational issues,fault_diagnosis
+Check node C for operational issues,fault_diagnosis
+Perform fault analysis on node A,fault_diagnosis
+Perform fault analysis on node B,fault_diagnosis
+Perform fault analysis on node C,fault_diagnosis
+Check QBER issues on node A,fault_diagnosis
+Check QBER issues on node B,fault_diagnosis
+Check QBER issues on node C,fault_diagnosis
+Check key rate problems on node A,fault_diagnosis
+Check key rate problems on node B,fault_diagnosis
+Check key rate problems on node C,fault_diagnosis
+Check visibility degradation on node A,fault_diagnosis
+Check visibility degradation on node B,fault_diagnosis
+Check visibility degradation on node C,fault_diagnosis
+Troubleshoot node A issues,fault_diagnosis
+Troubleshoot node B issues,fault_diagnosis
+Troubleshoot node C issues,fault_diagnosis
+Check laser power faults on node A,fault_diagnosis
+Check laser power faults on node B,fault_diagnosis
+Check laser power faults on node C,fault_diagnosis
+Check temperature issues on node A,fault_diagnosis
+Check temperature issues on node B,fault_diagnosis
+Check temperature issues on node C,fault_diagnosis
+Check CPU load problems on node A,fault_diagnosis
+Check CPU load problems on node B,fault_diagnosis
+Check CPU load problems on node C,fault_diagnosis
+Check memory usage faults on node A,fault_diagnosis
+Check memory usage faults on node B,fault_diagnosis
+Check memory usage faults on node C,fault_diagnosis
+What is wrong with node A,fault_diagnosis
+What is wrong with node B,fault_diagnosis
+What is wrong with node C,fault_diagnosis
+What's wrong with node A,fault_diagnosis
+What's wrong with node B,fault_diagnosis
+What's wrong with node C,fault_diagnosis
+What's the problem with node A,fault_diagnosis
+What's the problem with node B,fault_diagnosis
+What's the problem with node C,fault_diagnosis
+Any issues with node A,fault_diagnosis
+Any issues with node B,fault_diagnosis
+Any issues with node C,fault_diagnosis
+Node A has problems,fault_diagnosis
+Node B has problems,fault_diagnosis
+Node C has problems,fault_diagnosis
+Something wrong with node A,fault_diagnosis
+Something wrong with node B,fault_diagnosis
+Something wrong with node C,fault_diagnosis
+Node A is having issues,fault_diagnosis
+Node B is having issues,fault_diagnosis
+Node C is having issues,fault_diagnosis
+Problems detected on node A,fault_diagnosis
+Problems detected on node B,fault_diagnosis
+Problems detected on node C,fault_diagnosis
+Issues found on node A,fault_diagnosis
+Issues found on node B,fault_diagnosis
+Issues found on node C,fault_diagnosis
+Node A showing errors,fault_diagnosis
+Node B showing errors,fault_diagnosis
+Node C showing errors,fault_diagnosis
+Node A malfunction,fault_diagnosis
+Node B malfunction,fault_diagnosis
+Node C malfunction,fault_diagnosis
+What is wrong with node 1,fault_diagnosis
+What is wrong with node 2,fault_diagnosis
+What is wrong with node 10,fault_diagnosis
+Check fault on node 123,fault_diagnosis
+Check fault on node XYZ,fault_diagnosis
+Check fault on node Alpha,fault_diagnosis
+Check fault on node Beta,fault_diagnosis
+Node D has problems,fault_diagnosis
+Node E has problems,fault_diagnosis
+Node F has problems,fault_diagnosis
+Node G showing errors,fault_diagnosis
+Node H malfunction,fault_diagnosis
+Node I issues,fault_diagnosis
+Node J problems,fault_diagnosis
+What's wrong with quantum node 1,fault_diagnosis
+What's wrong with quantum node 2,fault_diagnosis
+Issues with QKD node A,fault_diagnosis
+Issues with QKD node B,fault_diagnosis
+Problems with QKD node C,fault_diagnosis

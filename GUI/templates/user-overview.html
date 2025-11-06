@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- User and Role Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'user.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('user_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'user.view_user' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user') }}" role="button">Users</a>
+            </li>
+            {% endif %}
+            {% if 'role.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_role') }}" role="button">Roles</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_user_actions' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_audit') }}" role="button">User Audit Log</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <h3>User and Role Management Overview</h3>
+        <p>This page provides an overview of user and role management in the system.</p>
+        <div class="row row-cols-1 row-cols-md-4 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Active Users Today</h6>
+                        <h2 class="card-title text-success">{{ logged_in_today_count }} / {{ total_users }}</h2>
+                        <p class="card-text text-muted small">No. of Users Logged In Today</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Deactivated Accounts</h6>
+                        <h2 class="card-title text-danger">{{ deactivated_count }}</h2>
+                        <p class="card-text text-muted small">No. of Deactivated Accounts</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Long inactivity</h6>
+                        <h2 class="card-title text-info">{{ inactive_30_days_count }}</h2>
+                        <p class="card-text text-muted small">Accounts that haven't been logged in for 30 days</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Login Failures</h6>
+                        <h2 class="card-title text-danger">{{ locked_count }}</h2>
+                        <p class="card-text text-muted small">Detect Brute Force Attempts</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <canvas id="rolePermissionsChart"></canvas>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <canvas id="activeInactiveUsersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!-- Graphs-->
+    <script>
+        var rolePermCtx = document.getElementById('rolePermissionsChart').getContext('2d');
+        var rolePermissionsChart = new Chart(rolePermCtx, {
+            type: 'bar', // Bar chart type
+            data: {
+                labels: JSON.parse('{{ role_types | tojson  }}'), // X-axis labels
+                datasets: [{
+                    label: 'Number of People', // First dataset (number of people)
+                    data: JSON.parse('{{ user_counts | tojson }}'), // Number of people per role
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y1', // Link to left Y-axis (number of people)
+                }, {
+                    label: 'Number of Permissions', // Second dataset (number of permissions)
+                    data: JSON.parse('{{ permission_counts | tojson }}'), // Number of permissions per role
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1, 
+                    type: 'line', // Line chart for permissions
+                    fill: false, // Don't fill the line
+                    yAxisID: 'y2', // Link to right Y-axis (number of permissions)
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y1: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: 'rgba(54, 162, 235, 1)' // Color for the number of people axis
+                        },
+                        position: 'left', // Left Y-axis
+                    },
+                    y2: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: 'rgba(75, 192, 192, 1)' // Color for the number of permissions axis
+                        },
+                        position: 'right', // Right Y-axis
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Number of People and Permissions per Role'
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+
+        var activeInactiveCtx = document.getElementById('activeInactiveUsersChart').getContext('2d');
+        var activeInactiveStackedChart = new Chart(activeInactiveCtx, {
+            type: 'bar',
+            data: {
+                labels: JSON.parse('{{ role_types | tojson }}'),
+                datasets: [
+                    {
+                        label: 'Active',
+                        data: JSON.parse('{{ active_counts | tojson }}'),
+                        backgroundColor: '#4caf50',
+                        stack: 'user_status'
+                    },
+                    {
+                        label: 'Inactive',
+                        data: JSON.parse('{{ inactive_counts | tojson }}'),
+                        backgroundColor: '#cfd8dc',
+                        stack: 'user_status'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'User Account Status per Role (Last 7 Days)'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Roles'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Users'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

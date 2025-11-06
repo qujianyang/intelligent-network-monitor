@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'performance.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('performance_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'performance.view_individual' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('individual_performance_metrics') }}" role="button">Individual Metrics</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('qkd_metrics') }}" role="button">QKD Metrics</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>Individual Performance Metrics</h3>
+        <p class="text-muted">View detailed performance metrics for each QKD link.</p>
+        <div class="row g-4 mb-2 align-items-center">
+            <div class="col-md-2">
+                <div>
+                    <label class="form-label fw-bold">Node / Link:</label>
+                    <select id="nodeLinkFilter" class="form-select">
+                        <optgroup label="Nodes">
+                            {% for node in nodes %}
+                            <option value="{{ node.node_id }}" data-type="node">{{ node.node_id }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        <optgroup label="Links">
+                            {% for link in links %}
+                            <option value="{{ link.link_id }}" data-type="link">{{ link.link_id }}</option>
+                            {% endfor %}
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-9 d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label fw-bold">Filter By Time:</label> <br>
+                    <div class="btn-group" role="group" aria-label="Time filter buttons">
+                        <button type="button" class="btn btn-outline-primary" data-value="all">All</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="1h">Last 1 Hour</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="24h">Last 24 Hours</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="7d">Last 7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-value="custom"
+                            id="customButton">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom range picker (hidden initially) -->
+                <div class="d-flex gap-2 mt-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" />
+                    <input type="datetime-local" id="endTime" class="form-control" />
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="col-md-1 text-end">
+                <label class="form-label fw-bold">Export Data:</label><br>
+                <button class="btn btn-outline-success me-2" onclick="exportToExcel()" title="Export to Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                <a class="nav-item nav-link active" id="nav-chart-tab" data-bs-toggle="tab" href="#nav-chart" role="tab"
+                    aria-controls="nav-chart" aria-selected="true">Chart View</a>
+                <a class="nav-item nav-link" id="nav-table-tab" data-bs-toggle="tab" href="#nav-table" role="tab"
+                    aria-controls="nav-table" aria-selected="false">Table View</a>
+            </div>
+        </nav>
+
+
+        <div class="tab-content" id="nav-tabContent">
+            <div class="tab-pane fade show active" id="nav-chart" role="tabpanel" aria-labelledby="nav-chart-tab">
+                <br>
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="qberChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="visibilityChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="keyRateChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="availabilityChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="photonLossChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <canvas id="keyPoolChart" style="height:400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="nav-table" role="tabpanel" aria-labelledby="nav-table-tab">
+                <br>
+                <table class="table table-bordered table-responsive" id="statsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Timestamp</th>
+                            <th scope="col">QBER (%)</th>
+                            <th scope="col">Visibility (%)</th>
+                            <th scope="col">Secret Key Rate</th>
+                            <th scope="col">Secret Key Availability</th>
+                            <th scope="col">Link Status</th>
+                            <th scope="col">Photon Loss (%)</th>
+                            <th scope="col">Key Pool Remaining (%)</th>
+                            <th scope="col">Sessions Routed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currentStatsTable">
+                        <tr>
+                            <td>2025-06-02 01:00 UTC</td>
+                            <td>0.42</td>
+                            <td>98.1</td>
+                            <td>1260</td>
+                            <td>99.7</td>
+                            <td><span class="badge bg-secondary">Offline</span></td>
+                            <td>2.5</td>
+                            <td>82</td>
+                            <td>14</td>
+                        </tr>
+                        <tr>
+                            <td>2025-06-02 02:00 UTC</td>
+                            <td>0.55</td>
+                            <td>97.8</td>
+                            <td>1235</td>
+                            <td>99.4</td>
+                            <td><span class="badge bg-info">Online</span></td>
+                            <td>2.8</td>
+                            <td>76</td>
+                            <td>16</td>
+                        </tr>
+                        <tr>
+                            <td>2025-06-02 03:00 UTC</td>
+                            <td>8.35</td>
+                            <td>91.2</td>
+                            <td>920</td>
+                            <td>93.0</td>
+                            <td><span class="badge bg-warning">Warning</span></td>
+                            <td>6.2</td>
+                            <td>68</td>
+                            <td>12</td>
+                        </tr>
+                        <tr>
+                            <td>2025-04-02 04:00 UTC</td>
+                            <td>11.4</td>
+                            <td>85.5</td>
+                            <td>540</td>
+                            <td>85.7</td>
+                            <td><span class="badge bg-danger">Critical</span></td>
+                            <td>9.8</td>
+                            <td>53</td>
+                            <td>8</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Graphs-->
+    <script>
+        const labels = ['01:00', '02:00', '03:00', '04:00', '05:00'];
+
+        // 1. QBER (%)
+        new Chart(document.getElementById('qberChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'QBER (%)',
+                    data: [0.42, 0.55, 8.35, 11.4, 0.39],
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255,0,0,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'QBER (%)' } }
+            }
+        });
+
+        // 2. Visibility (%)
+        new Chart(document.getElementById('visibilityChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Visibility (%)',
+                    data: [98.1, 97.8, 91.2, 85.5, 98.5],
+                    borderColor: 'blue',
+                    backgroundColor: 'rgba(0,0,255,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Visibility (%)' } }
+            }
+        });
+
+        // 3. Secret Key Rate (bps)
+        new Chart(document.getElementById('keyRateChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Key Rate (kbps)',
+                    data: [12.60, 12.35, 9.20, 5.40, 12.80],
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0,128,0,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Secret Key Rate (bps)' } }
+            }
+        });
+
+        // 4. Secret Key Availability (%)
+        new Chart(document.getElementById('availabilityChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Key Availability (%)',
+                    data: [99.7, 99.4, 93.0, 85.7, 99.9],
+                    borderColor: 'orange',
+                    backgroundColor: 'rgba(255,165,0,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Secret Key Availability (%)' } }
+            }
+        });
+
+        // 5. Photon Loss (%)
+        new Chart(document.getElementById('photonLossChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Photon Loss (%)',
+                    data: [2.5, 2.8, 6.2, 9.8, 2.2],
+                    borderColor: 'purple',
+                    backgroundColor: 'rgba(128,0,128,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Photon Loss (%)' } }
+            }
+        });
+
+        // 6. Key Pool Remaining (%)
+        new Chart(document.getElementById('keyPoolChart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Key Pool Remaining (%)',
+                    data: [82, 76, 68, 53, 88],
+                    borderColor: 'teal',
+                    backgroundColor: 'rgba(0,128,128,0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Key Pool Remaining (%)' } }
+            }
+        });
+
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const nodeLinkFilter = document.getElementById('nodeLinkFilter');
+
+            // Set the default value to "node" (if not already set)
+            nodeLinkFilter.value = 'node'; // or nodeLinkFilter.querySelector('option[data-type="node"]').value;
+
+            // Manually trigger the 'change' event to show nodes by default
+            const event = new Event('change');
+            nodeLinkFilter.dispatchEvent(event);
+        });
+        
+        document.getElementById('nodeLinkFilter').addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const type = selectedOption.getAttribute('data-type');
+
+            // For nodes: Show key pool and photon loss, hide others
+            if (type === 'node') {
+                document.getElementById('qberChart').parentElement.parentElement.style.display = 'none';
+                document.getElementById('visibilityChart').parentElement.parentElement.style.display = 'none';
+                document.getElementById('keyRateChart').parentElement.parentElement.style.display = 'none';
+
+                document.getElementById('availabilityChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('photonLossChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('keyPoolChart').parentElement.parentElement.style.display = 'block';
+            }
+            // For links: Show all except key pool availability and photon loss
+            else if (type === 'link') {
+                document.getElementById('qberChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('visibilityChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('keyRateChart').parentElement.parentElement.style.display = 'block';
+
+                document.getElementById('availabilityChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('photonLossChart').parentElement.parentElement.style.display = 'block';
+                document.getElementById('keyPoolChart').parentElement.parentElement.style.display = 'none';
+            }
+        });
+    </script>
+
+
+
+    <script>
+        $(document).ready(function () {
+            $('#statsTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[0, "desc"]] // Default sort by "Time Detected" column
+            });
+        });
+
+        let selectedTimeWindow = 'all'; // Default
+
+        function filterTable() {
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (selectedTimeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return;
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentStatsTable tr');
+            rows.forEach(row => {
+                const timeText = row.cells[0].textContent.trim(); // Column 0 = Timestamp
+                const detectedTime = new Date(timeText);
+                const matchesTime = (selectedTimeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+                row.style.display = matchesTime ? '' : 'none';
+            });
+        }
+
+        // Listen to all time filter buttons
+        document.querySelectorAll('[data-value]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Update selected value
+                selectedTimeWindow = this.getAttribute('data-value');
+
+                // Highlight active button
+                document.querySelectorAll('[data-value]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide custom range inputs
+                const isCustom = selectedTimeWindow === 'custom';
+                document.getElementById('customRangeInputs').classList.toggle('d-none', !isCustom);
+
+                filterTable(); // Run the filter
+            });
+        });
+
+        // Refilter when custom date inputs are changed
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const table = document.getElementById("statsTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "statsTable" });
+            XLSX.writeFile(wb, "statsTable.xlsx");
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({ html: '#statsTable' });
+            doc.save('statsTable.pdf');
+        }
+    </script>
+
+
+</body>
+
+</html>

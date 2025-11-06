@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'alert.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('security_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'alert.view_unresolved' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('alert_list') }}" role="button">Alert List</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_alerts' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alert_audit_log') }}" role="button">Alert Audit Log</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_faults' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('alarm_audit_log') }}" role="button">Alarm Audit Log</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>Alert List</h3>
+        <p>Below is the list of current alerts. Click on an alert to view detailed information.</p>
+        <div class="row g-4 mb-2 align-items-center">
+
+            <!-- Severity Filters -->
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Filter by Severity:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input severity-filter" type="checkbox" value="Critical"
+                        id="severityCritical" checked>
+                    <label class="form-check-label" for="severityCritical">Critical</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input severity-filter" type="checkbox" value="Warning" id="severityWarning"
+                        checked>
+                    <label class="form-check-label" for="severityWarning">Warning</label>
+                </div>
+            </div>
+
+            <!-- Type Filters -->
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Type:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input type-filter" type="checkbox" value="QBER Spike" id="typeQber"
+                        checked>
+                    <label class="form-check-label" for="typeQber">QBER</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input type-filter" type="checkbox" value="Visibility Low"
+                        id="typeVisibility" checked>
+                    <label class="form-check-label" for="typeVisibility">Visibility</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input type-filter" type="checkbox" value="Low Key Pool" id="typeKeyPool"
+                        checked>
+                    <label class="form-check-label" for="typeKeyPool">Key Pool</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input type-filter" type="checkbox" value="High Photon Loss"
+                        id="typePhotonLoss" checked>
+                    <label class="form-check-label" for="typePhotonLoss">Photon Loss</label>
+                </div>
+            </div>
+
+            <div class="col-md-5 d-flex align-items-end gap-2">
+                <div>
+                    <label for="timeWindowFilter" class="form-label fw-bold">Filter By Time:</label>
+                    <select id="timeWindowFilter" class="form-select">
+                        <option value="all">All</option>
+                        <option value="1h">Last 1 Hour</option>
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+
+                <!-- Custom range picker (side-by-side, hidden initially) -->
+                <div class="d-flex align-items-end gap-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" placeholder="Start" />
+                    <input type="datetime-local" id="endTime" class="form-control" placeholder="End" />
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="col text-end">
+                <label class="form-label fw-bold">Export Data:</label><br>
+                <button class="btn btn-outline-success me-2" onclick="exportToExcel()" title="Export to Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+            </div>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        <table class="table table-bordered table-responsive" id="alertTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Alert ID</th>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Severity</th>
+                    <th scope="col">Component Affected</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody id="currentAlertTable">
+                {% for alert in alerts %}
+                <tr>
+                    <td>{{ alert['alert_id'] }}</td>
+                    <td>{{ alert['detected_at'] }}</td>
+                    <td>{{ alert['type'] }}</td>
+                    <td>{{ alert['severity'] }}</td>
+                    <td>{{ alert['component'] }}</td>
+                    <td>{{ alert['description'] }}</td>
+                    <td>
+                        {% if alert['status'] == 'Open' and 'alert.escalate' in permissions %}
+                        <form method="POST" action="{{ url_for('escalate') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="alertId" value="{{ alert['alert_id'] }}">
+                            <button type="submit" class="btn btn-warning btn-sm">
+                                <i class="bi bi-arrow-up-right-circle"></i> Escalate
+                            </button>
+                        </form>
+                        {% else %}
+                        {{ alert['status'] }}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!--Table  -->
+    <script>
+        $(document).ready(function () {
+            $('#alertTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Timestamp" column
+            });
+        });
+
+
+
+        function filterTable() {
+            const severityFilters = Array.from(document.querySelectorAll('.severity-filter:checked')).map(cb => cb.value);
+            const typeFilters = Array.from(document.querySelectorAll('.type-filter:checked')).map(cb => cb.value);
+            const timeWindow = document.getElementById('timeWindowFilter').value;
+
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (timeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (timeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (timeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (timeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return; // Skip filter if dates are missing
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentAlertTable tr');
+            rows.forEach(row => {
+                const severity = row.cells[3].textContent.trim();
+                const timeText = row.cells[1].textContent.trim(); // "Time Detected"\
+                const type = row.cells[2].textContent.trim();
+                const detectedTime = new Date(timeText);
+
+                const matchesSeverity = severityFilters.includes(severity);
+                const matchesType = typeFilters.includes(type);
+                const matchesTime = (timeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+
+                row.style.display = (matchesSeverity && matchesTime && matchesType) ? '' : 'none';
+
+            });
+        }
+
+        // Listen to all time filter buttons
+        document.querySelectorAll('.severity-filter, .type-filter').forEach(cb => {
+            cb.addEventListener('change', filterTable);
+        });
+        document.getElementById('timeWindowFilter').addEventListener('change', function () {
+            const customRange = document.getElementById('customRangeInputs');
+            customRange.classList.toggle('d-none', this.value !== 'custom');
+            filterTable();
+        });
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const table = document.getElementById("alertTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Alert" });
+            XLSX.writeFile(wb, "alert.xlsx");
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({ html: '#alertTable' });
+            doc.save('alert.pdf');
+        }
+    </script>
+</body>
+
+</html>

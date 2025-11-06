@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- User and Role Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            {% if 'user.view_overview' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_overview') }}" role="button">Overview</a>
+            </li>
+            {% endif %}
+            {% if 'user.view_user' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user') }}" role="button">Users</a>
+            </li>
+            {% endif %}
+            {% if 'role.view' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('user_role') }}" role="button">Roles</a>
+            </li>
+            {% endif %}
+            {% if 'audit.view_user_actions' in permissions %}
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('user_audit') }}" role="button">User Audit Log</a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <h3>All Roles and Permissions</h3>
+        <p>This page provides a list of all roles and permissions in the system</p>
+
+        <!-- Create User -->
+        <div class="col text-end">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal"
+                title="Create User">
+                <i class="bi bi-plus-circle"></i> Create Role
+            </button>
+        </div>
+        <br>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% set category, message = messages[-1] %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        <table class="table table-bordered table-responsive" id="roleTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Role Name</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">No. of Permissions</th>
+                    <th scope="col">No. of Users</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="currentRoleTable">
+                {% for role in roles %}
+                <tr>
+                    <td>{{ role['role_name'] }}</td>
+                    <td>{{ role['description'] }}</td>
+                    <td>{{ role['permission_count'] }}</td>
+                    <td>{{ role['user_count'] }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#viewRoleModal" data-role="{{ role['role_name'] }}"
+                                data-permissions="{{ role['permissions'] | join(',') }}"><i class="bi bi-search"></i>
+                                View</button>
+                            {% if role['default'] == 0 and 'role.edit' in permissions %}
+                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown"></button>
+                            <ul class="dropdown-menu">
+                                <li><button type="submit" class="dropdown-item text-warning" data-bs-toggle="modal"
+                                        data-bs-target="#editRoleModal" data-role-id="{{ role['id'] }}"
+                                        data-role-name="{{ role['role_name'] }}"
+                                        data-role-desc="{{ role['description'] }}"
+                                        data-role-permissions="{{ role['permissions'] | join(',') }}">
+                                       Edit
+                                    </button>
+                                <li>
+                                    {% if role['user_count'] == 0 and 'role.delete' in permissions %}
+                                    <form method="post" action="{{ url_for('auth.delete_role') }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="roleName" value="{{ role['role_name'] }}">
+                                <li><button type="submit" class="dropdown-item text-danger">
+                                        Delete
+                                    </button></li>
+                                </form>
+                                {% endif %}
+                                {% if role['status'] != 'Approved' and 'role.approve' in permissions %}
+                                <form method="post" action="{{ url_for('auth.approve_role') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="roleName" value="{{ role['role_name'] }}">
+                                    <li><button type="submit" class="dropdown-item text-success">
+                                            Approve
+                                        </button></li>
+                                </form>
+                                <form method="post" action="{{ url_for('auth.reject_role') }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="roleName" value="{{ role['role_name'] }}">
+                                    <li><button type="submit" class="dropdown-item text-danger">
+                                            Reject
+                                        </button></li>
+                                </form>
+                                {% endif %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createRoleModal" tabindex="-1" aria-labelledby="createRoleModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createRoleModalLabel">Create New Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createRoleForm" method="post" action="{{ url_for('auth.create_role') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">Role Name</label>
+                            <input type="text" class="form-control" id="roleName" name="roleName"
+                                placeholder="Enter role name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Role Description</label>
+                            <textarea class="form-control" id="description" name="description"
+                                placeholder="Enter role description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="permissions" class="form-label">Permissions</label>
+                            <div id="permissions" class="d-flex flex-column" name="permissions">
+                                {% for perm in non_sensitive_permissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="permissions"
+                                        value="{{ perm['permission_name'] }}" id="perm_{{ loop.index }}">
+                                    <label class="form-check-label" for="perm_{{ loop.index }}">
+                                        {{ perm["description"] }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="createRoleForm" class="btn btn-primary">Create
+                        Role</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- View Role Modal -->
+    <div class="modal fade" id="viewRoleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Role Details: <span id="modalRoleName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Permissions</h6>
+                    <ul id="modalPermissions"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div class="modal fade" id="editRoleModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="editRoleForm" method="POST" action="{{ url_for('auth.edit_role') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Role</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" name="editRoleId" id="editRoleId">
+
+                        <div class="mb-3">
+                            <label class="form-label">Role Name</label>
+                            <input type="text" class="form-control" name="editRoleName" id="editRoleName" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" name="editRoleDescription" id="editRoleDescription">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Permissions</label>
+                            <div class="row">
+                                {% for perm in non_sensitive_permissions %}
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input edit-permission-checkbox" type="checkbox"
+                                            name="editPermissions" value="{{ perm['description'] }}"
+                                            id="perm_{{ loop.index }}">
+                                        <label class="form-check-label" for="perm_{{ loop.index }}">{{
+                                            perm['description'] }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" form="editRoleForm" class="btn btn-primary">Update Role</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <!-- View Role Modal Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const viewModal = document.getElementById('viewRoleModal');
+            viewModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const roleName = button.getAttribute('data-role');
+                const permissions = button.getAttribute('data-permissions');
+
+                // Set role name
+                document.getElementById('modalRoleName').innerText = roleName;
+
+                // Set permissions list
+                const permissionList = document.getElementById('modalPermissions');
+                permissionList.innerHTML = '';
+                permissions.split(',').forEach(p => {
+                    const li = document.createElement('li');
+                    li.textContent = p.trim();
+                    permissionList.appendChild(li);
+                });
+            });
+        });
+    </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editModal = document.getElementById('editRoleModal');
+            editModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+
+                const roleId = button.getAttribute('data-role-id');
+                const roleName = button.getAttribute('data-role-name');
+                const roleDesc = button.getAttribute('data-role-desc');
+                const rolePermissions = button.getAttribute('data-role-permissions').split(',');
+
+                // Set input values
+                document.getElementById('editRoleId').value = roleId;
+                document.getElementById('editRoleName').value = roleName;
+                document.getElementById('editRoleDescription').value = roleDesc;
+
+                // Uncheck all permissions first
+                const checkboxes = document.querySelectorAll('.edit-permission-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+
+                // Re-check assigned permissions
+                checkboxes.forEach(cb => {
+                    if (rolePermissions.map(p => p.trim()).includes(cb.value.trim())) {
+                        cb.checked = true;
+                    }
+                });
+            });
+        });
+    </script>
+
+
+
+    <!--Table  -->
+    <script>
+        $(document).ready(function () {
+            $('#roleTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[0, "asc"]] // Default sort by "Role Name" column
+            });
+        });
+    </script>
+</body>
+
+</html>

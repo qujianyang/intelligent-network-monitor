@@ -1,0 +1,66 @@
+<!-- Navbar with dropdown and chat toggle -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light" style="padding: 0 20px;">
+  <a class="navbar-brand" href="#">LOGO</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav me-auto">
+      {% macro nav_item(title, permission_route_map) %}
+        {% set ns = namespace(route=None) %}
+        {% for perm, r in permission_route_map.items() %}
+          {% if ns.route is none and perm in permissions %}
+            {% set ns.route = r %}
+          {% endif %}
+        {% endfor %}
+
+        {% if ns.route %}
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for(ns.route) }}">{{ title }}</a>
+          </li>
+        {% endif %}
+      {% endmacro %}
+      {{ nav_item("Fault Management", {
+      'fault.view_overview': 'fault_overview',
+      'fault.view_details': 'alarm_list'
+      }) }}
+
+      {{ nav_item("Path Management", {
+      'path.view_overview': 'path_overview',
+      'path.view_network': 'network_topology',
+      'audit.view_topology': 'topology_tracker',
+      'path.session.view_table': 'kmb_session',
+      'policy.view': 'policy_view',
+      'audit.view_policies': 'policy_audit'
+      }) }}
+
+      {{ nav_item("Performance Management", {
+      'performance.view_overview': 'performance_overview',
+      'performance.view_individual': 'individual_performance_metrics',
+      }) }}
+      
+      {{ nav_item("Security & Alerts Management", {
+      'alert.view_overview': 'security_overview',
+      'alert.view_unresolved': 'alert_list',
+      'audit.view_alerts': 'alert_audit_log',
+      'audit.view_faults': 'alarm_audit_log'
+      }) }}
+
+      {{ nav_item("User Management", {
+      'user.view_overview': 'user_overview',
+      'user.view_user': 'user',
+      'role.view': 'user_role',
+      'audit.view_user_actions': 'user_audit'
+      }) }}
+
+    </ul>
+    <div class="ms-auto">
+      <form action="{{ url_for('auth.logout') }}" method="post" style="display: inline;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-danger my-2 my-sm-0" type="submit"><i class="bi bi-box-arrow-right me-1"></i> Logout</button>
+    </form>
+    </div>
+  </div>
+</nav>

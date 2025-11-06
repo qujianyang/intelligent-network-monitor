@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% include "common/dependencies.html" %}
+</head>
+
+<body>
+    <!-- Include the navbar-->
+    {% include "common/navbar.html" %}
+
+    <!-- Performance Management-->
+    <div class="cards">
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('performance_overview') }}" role="button">Overview</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('individual_performance_metrics') }}" role="button">Individual
+                    Metrics</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="{{ url_for('qkd_metrics') }}" role="button">QKD Metrics</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="{{ url_for('key_performance') }}" role="button">Key Performance</a>
+        </ul>
+
+        <h3>Key Performance</h3>
+        <p>This section provides an overview of the current key performance status, including key metrics and linked
+            session information.</p>
+        <div class="row g-3 mb-3 align-items-center">
+            <!-- Status Filters -->
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Filter by Status:</label><br>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Delivered" id="statusDelivered" checked>
+                    <label class="form-check-label" for="statusDelivered">Delivered</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Expired" id="statusExpired"
+                        checked>
+                    <label class="form-check-label" for="statusExpired">Expired</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input status-filter" type="checkbox" value="Failed" id="statusFailed"
+                        checked>
+                    <label class="form-check-label" for="statusFailed">Failed</label>
+                </div>
+            </div>
+            <!-- Time Windows Filters -->
+            <div class="col-md-9 d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label fw-bold">Filter By Time:</label> <br>
+                    <div class="btn-group" role="group" aria-label="Time filter buttons">
+                        <button type="button" class="btn btn-outline-primary button-filter"
+                            data-value="all">All</button>
+                        <button type="button" class="btn btn-outline-primary button-filter" data-value="1h">Last 1
+                            Hour</button>
+                        <button type="button" class="btn btn-outline-primary button-filter" data-value="24h">Last 24
+                            Hours</button>
+                        <button type="button" class="btn btn-outline-primary button-filter" data-value="7d">Last 7
+                            Days</button>
+                        <button type="button" class="btn btn-outline-primary button-filter" data-value="custom"
+                            id="customButton">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom range picker (hidden initially) -->
+                <div class="d-flex gap-2 mt-2 d-none" id="customRangeInputs">
+                    <input type="datetime-local" id="startTime" class="form-control" />
+                    <input type="datetime-local" id="endTime" class="form-control" />
+                </div>
+            </div>
+
+
+            <!-- Export Buttons -->
+            <div class="col-md-1 text-end">
+                <label class="form-label fw-bold">Export Data:</label><br>
+                <button class="btn btn-outline-success me-2" onclick="exportToExcel()" title="Export to Excel">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export to PDF">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </button>
+            </div>
+        </div>
+        <table class="table table-bordered table-responsive" id="keyTable">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Key ID</th>
+                    <th scope="col">Generated On</th>
+                    <th scope="col">Source Node</th>
+                    <th scope="col">Consumed By Session</th>
+                    <th scope="col">Time Retained</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody id="currentKeyTable">
+                <tr data-bs-toggle="offcanvas" data-bs-target="#keyDetails" aria-controls="keyDetails">
+                    <td>KEY-9832</td>
+                    <td>2025-06-03 07:10 UTC</td>
+                    <td>Node-A</td>
+                    <td>-</td>
+                    <td>12m 45s</td>
+                    <td><span class="badge bg-danger">Failed</span></td>
+                </tr>
+                <tr data-bs-toggle="offcanvas" data-bs-target="#keyDetails" aria-controls="keyDetails">
+                    <td>KEY-7645</td>
+                    <td>2025-06-03 06:58 UTC</td>
+                    <td>Node-B</td>
+                    <td>-</td>
+                    <td>1h 15m</td>
+                    <td><span class="badge bg-danger">Failed</span></td>
+                </tr>
+                <tr data-bs-toggle="offcanvas" data-bs-target="#keyDetails" aria-controls="keyDetails">
+                    <td>KEY-6539</td>
+                    <td>2025-06-03 05:40 UTC</td>
+                    <td>Node-C</td>
+                    <td>-</td>
+                    <td>2h 35m</td>
+                    <td><span class="badge bg-secondary">Expired</span></td>
+                </tr>
+                <tr data-bs-toggle="offcanvas" data-bs-target="#keyDetails" aria-controls="keyDetails">
+                    <td>KEY-8110</td>
+                    <td>2025-06-03 07:30 UTC</td>
+                    <td>Node-A</td>
+                    <td>Session-224</td>
+                    <td>8m 11s</td>
+                    <td><span class="badge bg-success">Delivered</span></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="keyDetails" aria-labelledby="keyDetailsLabel">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="keyDetailsLabel">Key Details</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="offcanvas-body">
+                <div class="accordion" id="keyDetailsAccordion">
+                    <!-- Key Generation Information -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="keyGenHeading">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#keyGenCollapse" aria-expanded="true" aria-controls="keyGenCollapse">
+                                Key Generation Information
+                            </button>
+                        </h2>
+                        <div id="keyGenCollapse" class="accordion-collapse collapse show"
+                            aria-labelledby="keyGenHeading">
+                            <div class="accordion-body">
+                                <p><strong>Key ID:</strong> <span id="key-id">KEY-8110</span></p>
+                                <p><strong>Generated At:</strong> <span id="generated-at">2025-06-03 07:30 UTC</span>
+                                </p>
+                                <p><strong>Source Node:</strong> <span id="source-node">Node-A</span></p>
+                                <p><strong>QBER at Generation:</strong> <span id="qber-gen">0.48%</span></p>
+                                <p><strong>Visibility:</strong> <span id="visibility">98.6%</span></p>
+                                <p><strong>Secret Key Rate:</strong> <span id="key-rate">1.22 kbps</span></p>
+                                <p><strong>Stored In:</strong> <span id="kms-storage">KMS-Node-A</span></p>
+                                <p><strong>Consumed By Session:</strong> <span id="session-id">Session-224</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Information -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="sessionHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#sessionCollapse" aria-expanded="false" aria-controls="sessionCollapse">
+                                Session Information
+                            </button>
+                        </h2>
+                        <div id="sessionCollapse" class="accordion-collapse collapse" aria-labelledby="sessionHeading">
+                            <div class="accordion-body">
+                                <p><strong>Session ID:</strong> <span id="session-id">Session-224</span></p>
+                                <p><strong>Path:</strong> <span id="session-path">KMS-A ➝ KMS-B</span></p>
+                                <p><strong>Start / End Time:</strong> <span id="session-start">2025-06-02 13:15
+                                        UTC</span> / <span id="session-end">2025-06-02 14:03 UTC</span></p>
+                                <p><strong>Key IDs Used:</strong> <span id="session-key-ids">KEY-8110, KEY-8111,
+                                        KEY-8112</span></p>
+                                <p><strong>Number of Keys:</strong> <span id="key-count">3</span></p>
+                                <p><strong>Key Validity (Lifespan):</strong> <span id="key-lifespan">60 minutes</span>
+                                </p>
+                                <p><strong>Reuse Occurred?:</strong> <span id="key-reuse">No</span></p>
+                                <p><strong>Key Delivery Status:</strong> <span id="delivery-status">Completed</span></p>
+                                <p><strong>Delivery Timestamps:</strong> <span id="delivery-times">13:18 UTC, 13:34 UTC,
+                                        13:50 UTC</span></p>
+                                <p><strong>Consumption Rate:</strong> <span id="consumption-rate">1.8 kbps</span></p>
+                                <p><strong>First Key Time:</strong> <span id="first-key-time">2025-06-02 13:18
+                                        UTC</span></p>
+                                <p><strong>Latest Key Time:</strong> <span id="latest-key-time">2025-06-02 13:50
+                                        UTC</span></p>
+                                <p><strong>Session Duration:</strong> <span id="session-duration">32 minutes</span></p>
+                                <p><strong>Status:</strong> <span id="session-status">Closed</span></p>
+                                <p><strong>Contribution to System:</strong> <span id="session-contribution">5.3%</span>
+                                </p>
+                                <p><strong>Average QBER:</strong> <span id="avg-qber">0.56%</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /accordion -->
+            </div> <!-- /offcanvas-body -->
+        </div>
+
+
+    </div>
+
+    <!-- Chat window -->
+    {% include "common/chatbot.html" %}
+
+    <!--chatbot script-->
+
+    <script>
+        $(document).ready(function () {
+            $('#keyTable').DataTable({
+                info: false,
+                paging: true,
+                searching: true,
+                order: [[1, "desc"]] // Default sort by "Time Detected" column
+            });
+        });
+
+
+        let selectedTimeWindow = 'all'; // Default
+
+        function filterTable() {
+            const statusFilters = Array.from(document.querySelectorAll('.status-filter:checked')).map(cb => cb.value);
+
+            const now = new Date();
+            let startTime = null;
+            let endTime = now;
+
+            if (selectedTimeWindow === '1h') {
+                startTime = new Date(now.getTime() - 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '24h') {
+                startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === '7d') {
+                startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (selectedTimeWindow === 'custom') {
+                const startInput = document.getElementById('startTime').value;
+                const endInput = document.getElementById('endTime').value;
+                if (!startInput || !endInput) return; // Skip filter if dates are missing
+                startTime = new Date(startInput);
+                endTime = new Date(endInput);
+            }
+
+            const rows = document.querySelectorAll('#currentKeyTable tr');
+            rows.forEach(row => {
+                const status = row.cells[5].textContent.trim();
+                const timeText = row.cells[1].textContent.trim(); // "Time Detected"
+                const detectedTime = new Date(timeText);
+
+                const matchesStatus = statusFilters.includes(status);
+                const matchesTime = (selectedTimeWindow === 'all') || (detectedTime >= startTime && detectedTime <= endTime);
+
+                row.style.display = (matchesStatus && matchesTime) ? '' : 'none';
+            });
+        }
+
+        // Attach event listeners
+        document.querySelectorAll('.status-filter').forEach(cb => {
+            cb.addEventListener('change', filterTable);
+        });
+
+        document.querySelectorAll('[data-value]').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Update selected value
+                selectedTimeWindow = this.getAttribute('data-value');
+
+                // Highlight active button
+                document.querySelectorAll('[data-value]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide custom range inputs
+                const isCustom = selectedTimeWindow === 'custom';
+                document.getElementById('customRangeInputs').classList.toggle('d-none', !isCustom);
+
+                filterTable(); // Run the filter
+            });
+        });
+        document.getElementById('startTime').addEventListener('change', filterTable);
+        document.getElementById('endTime').addEventListener('change', filterTable);
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const table = document.getElementById("keyTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Keys" });
+            XLSX.writeFile(wb, "keys.xlsx");
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({ html: '#keyTable' });
+            doc.save('keys.pdf');
+        }
+    </script>
+
+
+</body>
+
+</html>

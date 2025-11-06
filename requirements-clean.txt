@@ -1,0 +1,91 @@
+# QKD System - Clean pip-installable requirements
+# Python 3.10 compatible
+
+# ============================================
+# Web Framework & HTTP
+# ============================================
+Flask==3.1.1
+flask-wtf==1.2.2
+flask-mail==0.10.0
+Werkzeug==3.1.0
+requests==2.32.3
+
+# ============================================
+# Database
+# ============================================
+mysql-connector-python==9.3.0
+pymysql==1.1.2
+SQLAlchemy==2.0.41
+python-dotenv==1.1.0
+
+# ============================================
+# Machine Learning & AI
+# ============================================
+scikit-learn==1.7.0
+joblib==1.4.2
+numpy==1.26.4
+pandas==2.2.3
+scipy==1.14.1
+
+# ============================================
+# LLM & RAG (Retrieval Augmented Generation)
+# ============================================
+langchain==0.3.25
+langchain-ollama==0.3.3
+ollama==0.6.0  # Ollama Python client for LLM interaction
+sentence-transformers==4.1.0
+transformers==4.52.4
+torch==2.7.1
+
+# ============================================
+# Vector Search & Indexing
+# ============================================
+# Use faiss-cpu for CPU-only systems
+# Use faiss-gpu for GPU acceleration (requires CUDA)
+faiss-cpu==1.9.0
+# faiss-gpu==1.7.2  # Uncomment if you have GPU
+
+rank-bm25==0.2.2
+
+# ============================================
+# LlamaIndex (for fallback PDF processing)
+# ============================================
+# Minimal set of llama-index packages actually used in the codebase
+# These provide Document class and PDF reading capabilities
+llama-index-core==0.12.13
+llama-index-readers-file==0.4.2
+# Additional dependencies for llama-index
+dataclasses-json==0.6.7
+aiohttp==3.13.2
+tiktoken==0.12.0
+wrapt==2.0.0  # Required by llama-index-core
+
+# ============================================
+# PDF Processing
+# ============================================
+PyMuPDF==1.26.1
+pdfplumber==0.11.6
+pypdf==5.6.0
+reportlab==4.4.3
+pdfminer.six==20250506  # Required by pdfplumber
+Pillow==12.0.0  # Image processing for PDFs
+
+# ============================================
+# NLP & Text Processing
+# ============================================
+nltk==3.9.1
+
+# ============================================
+# Utilities
+# ============================================
+diskcache==5.6.3
+psutil==6.1.1
+pytz==2024.2
+python-dateutil==2.9.0
+cryptography==46.0.3  # Security and encryption utilities
+
+# ============================================
+# Additional packages (install as needed)
+# ============================================
+# beautifulsoup4==4.13.4  # HTML parsing
+# prophet==1.1.6  # Time series forecasting
