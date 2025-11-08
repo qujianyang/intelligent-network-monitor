@@ -48,3 +48,36 @@ htmlcov/
 *.exe
 *.o
 *.a
+
+# Virtual environments
+venv/
+ENV/
+.venv/
+env/
+
+# Machine Learning models (downloaded at runtime)
+*.pkl
+*.bin
+*.pth
+*.safetensors
+*.onnx
+Dashboard/models/embeddings/
+Dashboard/models/*.pkl
+Dashboard/models/index/*.pkl
+Dashboard/models/reranker_cache/*.db
+
+# Data files (managed separately or generated)
+data/CSV/*
+data/*.csv
+data/*.pkl
+data/*.bin
+data/sop_documents/*.pdf
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large SQL dumps
+docker/mysql-init/*-data.sql
+docker/mysql-init/*-existing-data.sql

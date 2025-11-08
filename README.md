@@ -91,6 +91,8 @@ intelligent-network-monitor/
 
 ## Installation
 
+> **Note**: Machine learning models are **not included** in this repository to keep it lightweight (~10 MB vs ~870 MB with models). Models are automatically downloaded during setup. See [MODELS.md](MODELS.md) for details.
+
 ### Option 1: Docker Deployment (Recommended)
 
 1. **Clone the repository**
@@ -105,15 +107,17 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
-3. **Start all services**
+3. **Start all services** (models download automatically during build)
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.dev.yml up --build
 ```
 
 4. **Access the application**
 - GUI: http://localhost:5000
 - Ollama API: http://localhost:11434
 - MySQL: localhost:3307
+
+> The first build will take longer (~5-10 minutes) as it downloads the ~420 MB embedding model. Subsequent builds use cached models.
 
 ### Option 2: Manual Installation
 
@@ -154,19 +158,23 @@ cp .env.example .env
 ollama pull qwen2:7b-instruct-q4_0
 ```
 
-7. **Initialize ML models**
+7. **Download ML models**
+```bash
+python scripts/download_models.py
+```
+This downloads the embedding model (~420 MB). Other models (Prophet, fault detectors) train automatically on first run.
+
+8. **Populate database with initial data (if needed)**
 ```bash
 python Dashboard/scripts/populate_ml_database.py
-python Dashboard/scripts/train_fault_models_improved.py
-python Dashboard/scripts/train_prophet_models.py
-python Dashboard/scripts/rebuild_faiss_index.py
-python Dashboard/scripts/rebuild_simple_bm25.py
 ```
 
-8. **Run the application**
+9. **Run the application**
 ```bash
 python GUI/app.py
 ```
+
+The application will automatically train Prophet and fault detection models on first startup if they don't exist.
 
 ## Configuration
 

@@ -21,9 +21,13 @@ RUN pip install --no-cache-dir -r requirements-clean.txt
 COPY GUI/ ./GUI/
 COPY Dashboard/ ./Dashboard/
 COPY config.py ./
+COPY scripts/ ./scripts/
 
 # Create necessary directories (data will be mounted as volume)
 RUN mkdir -p logs uploads cache Dashboard/models data
+
+# Download ML models
+RUN python scripts/download_models.py || echo "Warning: Model download failed, models will be downloaded at runtime"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
