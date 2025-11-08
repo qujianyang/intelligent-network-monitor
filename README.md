@@ -6,6 +6,21 @@ An AI-powered network management platform for Quantum Key Distribution (QKD) inf
 
 This system provides comprehensive monitoring, management, and AI-driven insights for QKD networks. It combines traditional network monitoring with advanced machine learning techniques to deliver proactive fault detection, performance forecasting, and intelligent troubleshooting through a conversational AI interface.
 
+## Demo
+
+Watch the system in action:
+
+[![QKD Network Monitor Demo](https://img.youtube.com/vi/pvyTEql4lcE/maxresdefault.jpg)](https://youtu.be/pvyTEql4lcE)
+
+*Click the image above to watch the full demo video*
+
+## Screenshots
+
+### AI Assistant with User Management
+![AI Assistant Interface](https://github.com/user-attachments/assets/365c44e4-46b2-4320-aaa3-b0d9bfad8e82)
+
+*The AI Assistant provides intelligent troubleshooting recommendations while the User Management dashboard tracks system usage and permissions*
+
 ## Key Features
 
 ### Core Capabilities
